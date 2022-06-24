@@ -1,0 +1,8 @@
+*.bin*
+*.efi*
+*.exe*
+*.pdb
+*.lib
+*.wasm*
+*.img
+*.so.*
