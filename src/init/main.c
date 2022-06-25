@@ -15,7 +15,7 @@ static int32_t initialise(void) {
     int64_t num = sys_write(fd, "2", 1);
     sys_close(fd);
     if (num != 1) return -3;
-    
+
     // Panic if we run out of memory anyway.
     fd = sys_openat(-1, "/proc/sys/vm/panic_on_oom", O_WRONLY, 0);
     if (fd < 0) return -4;
