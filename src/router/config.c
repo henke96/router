@@ -1,11 +1,78 @@
+#define config_WG_IF_NAME "wg0"
+#define config_WG_IF_INDEX 123
+// Try to use a port that is unlikely to be blocked by firewalls.
+#define config_WG_LISTEN_PORT 123
+#define config_WG_PEER1_ADDRESS { 10, 1, 2, 3 }
+// Generate with `echo <base64-public-key> | base64 --decode | xxd -i -c 256`
+#define config_WG_PEER1_PUBLIC_KEY { 0xd0, 0xe1, 0x80, 0xab, 0x2e, 0xec, 0xa9, 0x4f, 0x2a, 0x0c, 0xf1, 0xaa, 0xcc, 0xa3, 0x02, 0x78, 0x9d, 0xed, 0x4e, 0x31, 0x29, 0x95, 0x81, 0x45, 0x3c, 0x86, 0x00, 0x9e, 0xf3, 0xd7, 0xe7, 0x23 }
+
 struct config {
-    struct netlink rtnetlink;
+    int32_t rtnetlinkFd;
+    int32_t genetlinkFd;
+    uint16_t wgFamilyId;
+    uint16_t __pad;
+    uint8_t wgPublicKey[32]; // Populated by config_configure().
 };
 
 static struct config config;
 
 static int32_t config_init(void) {
-    return netlink_init(&config.rtnetlink, NETLINK_ROUTE);
+    config.rtnetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    if (config.rtnetlinkFd < 0) return -1;
+    int32_t status;
+    config.genetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC);
+    if (config.genetlinkFd < 0) {
+        status = -1;
+        goto cleanup_rtnetlinkFd;
+    }
+
+    // Get wireguard family id.
+    struct getFamilyRequest {
+        struct nlmsghdr hdr;
+        struct genlmsghdr genHdr;
+        struct nlattr familyNameAttr;
+        char familyName[sizeof(WG_GENL_NAME)];
+        char familyNamePad[util_PAD_BYTES(sizeof(WG_GENL_NAME), 4)];
+    };
+    struct getFamilyRequest request = {
+        .hdr = {
+            .nlmsg_len = sizeof(request),
+            .nlmsg_type = GENL_ID_CTRL,
+            .nlmsg_flags = NLM_F_REQUEST,
+        },
+        .genHdr = {
+            .cmd = CTRL_CMD_GETFAMILY,
+            .version = WG_GENL_VERSION
+        },
+        .familyNameAttr = {
+            .nla_len = sizeof(request.familyNameAttr) + sizeof(request.familyName),
+            .nla_type = CTRL_ATTR_FAMILY_NAME
+        },
+        .familyName = WG_GENL_NAME
+    };
+    status = netlink_talk(config.genetlinkFd, &request, sizeof(request));
+    if (status < 0) {
+        debug_printNum("Get family request failed (", status, ")\n");
+        status = -2;
+        goto cleanup_genetlinkFd;
+    }
+    // Iterate over all attributes, assume CTRL_ATTR_FAMILY_ID is one of them.
+    for (
+        struct nlattr *attr = (void *)&netlink_buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
+        attr = (void *)&((char *)attr)[util_ALIGN_FORWARD(attr->nla_len, 4)]
+    ) {
+        if (attr->nla_type == CTRL_ATTR_FAMILY_ID) {
+            config.wgFamilyId = *(uint16_t *)&attr[1];
+            break;
+        }
+    }
+    return 0;
+
+    cleanup_genetlinkFd:
+    debug_CHECK(sys_close(config.genetlinkFd), == 0);
+    cleanup_rtnetlinkFd:
+    debug_CHECK(sys_close(config.rtnetlinkFd), == 0);
+    return status;
 }
 
 static int32_t config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen) {
@@ -32,7 +99,7 @@ static int32_t config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixL
         }
     };
     hc_MEMCPY(&request.address, address, sizeof(request.address));
-    return netlink_talk(&config.rtnetlink, &request, sizeof(request));
+    return netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
 }
 
 static int32_t config_bringUp(uint8_t ifIndex) {
@@ -54,7 +121,47 @@ static int32_t config_bringUp(uint8_t ifIndex) {
             .ifi_change = 0xFFFFFFFF
         }
     };
-    return netlink_talk(&config.rtnetlink, &request, sizeof(request));
+    return netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+}
+
+static int32_t config_addWgPeer1Route(void) {
+    struct addRouteRequest {
+        struct nlmsghdr hdr;
+        struct rtmsg rtmsg;
+        struct nlattr destAttr;
+        uint8_t dest[4];
+        struct nlattr outIfAttr;
+        uint32_t outIfIndex;
+    };
+    struct addRouteRequest request = {
+        .hdr = {
+            .nlmsg_len = sizeof(request),
+            .nlmsg_type = RTM_NEWROUTE,
+            .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE
+        },
+        .rtmsg = {
+            .rtm_family = AF_INET,
+            .rtm_dst_len = 32,
+            .rtm_src_len = 0,
+            .rtm_tos = 0,
+            .rtm_table = RT_TABLE_MAIN,
+            .rtm_protocol = RTPROT_BOOT,
+            .rtm_scope = RT_SCOPE_LINK,
+            .rtm_type = RTN_UNICAST,
+            .rtm_flags = 0
+        },
+        .destAttr = {
+            .nla_len = sizeof(request.destAttr) + sizeof(request.dest),
+            .nla_type = RTA_DST
+        },
+        .dest = config_WG_PEER1_ADDRESS,
+        .outIfAttr = {
+            .nla_len = sizeof(request.outIfAttr) + sizeof(request.outIfIndex),
+            .nla_type = RTA_OIF
+        },
+        .outIfIndex = config_WG_IF_INDEX
+    };
+    return netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
 }
 
 static int32_t config_addWireguardIf(void) {
@@ -62,8 +169,8 @@ static int32_t config_addWireguardIf(void) {
         struct nlmsghdr hdr;
         struct ifinfomsg ifInfo;
         struct nlattr ifNameAttr;
-        char ifName[sizeof("wg0")];
-        char ifNamePad[util_PAD_BYTES(sizeof("wg0"), 4)];
+        char ifName[sizeof(config_WG_IF_NAME)];
+        char ifNamePad[util_PAD_BYTES(sizeof(config_WG_IF_NAME), 4)];
         struct nlattr linkInfoAttr;
         struct nlattr linkInfoKindAttr;
         char infoKind[sizeof(WG_GENL_NAME)];
@@ -78,7 +185,7 @@ static int32_t config_addWireguardIf(void) {
         .ifInfo = {
             .ifi_family = AF_UNSPEC,
             .ifi_type = 0,
-            .ifi_index = 0,
+            .ifi_index = config_WG_IF_INDEX,
             .ifi_flags = IFF_UP,
             .ifi_change = 0xFFFFFFFF
         },
@@ -86,7 +193,7 @@ static int32_t config_addWireguardIf(void) {
             .nla_len = sizeof(request.ifNameAttr) + sizeof(request.ifName),
             .nla_type = IFLA_IFNAME
         },
-        .ifName = "wg0",
+        .ifName = config_WG_IF_NAME,
         .linkInfoAttr = {
             .nla_len = sizeof(request.linkInfoAttr) + sizeof(request.linkInfoKindAttr) + sizeof(request.infoKind) + sizeof(request.infoKindPad),
             .nla_type = IFLA_LINKINFO | NLA_F_NESTED
@@ -97,7 +204,148 @@ static int32_t config_addWireguardIf(void) {
         },
         .infoKind = WG_GENL_NAME
     };
-    return netlink_talk(&config.rtnetlink, &request, sizeof(request));
+    return netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+}
+
+static int32_t config_setWgDevice(void) {
+    struct setDeviceRequest {
+        struct nlmsghdr hdr;
+        struct genlmsghdr genHdr;
+        struct nlattr ifIndexAttr;
+        uint32_t ifIndex;
+        struct nlattr privateKeyAttr;
+        uint8_t privateKey[32];
+        struct nlattr listenPortAttr;
+        uint32_t listenPort; // uint16_t
+        struct nlattr peersAttr;
+        // Peer1
+        struct nlattr peer1Attr;
+        struct nlattr peer1PublicKeyAttr;
+        uint8_t peer1PublicKey[32];
+        struct nlattr peer1AllowedIpsAttr;
+        struct nlattr peer1AllowedIpAttr;
+        struct nlattr peer1AllowedIpFamilyAttr;
+        uint32_t peer1AllowedIpFamily; // uint16_t
+        struct nlattr peer1AllowedIpAddressAttr;
+        uint8_t peer1AllowedIpAddress[4];
+        struct nlattr peer1AllowedIpNetmaskAttr;
+        uint32_t peer1AllowedIpNetmask; // uint8_t
+        uint32_t peer1End[]; // For use with offsetof()
+    };
+    struct setDeviceRequest request = {
+        .hdr = {
+            .nlmsg_len = sizeof(request),
+            .nlmsg_type = config.wgFamilyId,
+            .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
+        },
+        .genHdr = {
+            .cmd = WG_CMD_SET_DEVICE,
+            .version = WG_GENL_VERSION
+        },
+        .ifIndexAttr = {
+            .nla_len = sizeof(request.ifIndexAttr) + sizeof(request.ifIndex),
+            .nla_type = WGDEVICE_A_IFINDEX
+        },
+        .ifIndex = config_WG_IF_INDEX,
+        .privateKeyAttr = {
+            .nla_len = sizeof(request.privateKeyAttr) + sizeof(request.privateKey),
+            .nla_type = WGDEVICE_A_PRIVATE_KEY
+        },
+        .listenPortAttr = {
+            .nla_len = sizeof(request.listenPortAttr) + sizeof(uint16_t),
+            .nla_type = WGDEVICE_A_LISTEN_PORT
+        },
+        .listenPort = config_WG_LISTEN_PORT,
+        .peersAttr = {
+            .nla_len = offsetof(struct setDeviceRequest, peer1End) - offsetof(struct setDeviceRequest, peersAttr),
+            .nla_type = WGDEVICE_A_PEERS | NLA_F_NESTED
+        },
+        .peer1Attr = {
+            .nla_len = offsetof(struct setDeviceRequest, peer1End) - offsetof(struct setDeviceRequest, peer1Attr),
+            .nla_type = NLA_F_NESTED
+        },
+        .peer1PublicKeyAttr = {
+            .nla_len = sizeof(request.peer1PublicKeyAttr) + sizeof(request.peer1PublicKey),
+            .nla_type = WGPEER_A_PUBLIC_KEY
+        },
+        .peer1PublicKey = config_WG_PEER1_PUBLIC_KEY,
+        .peer1AllowedIpsAttr = {
+            .nla_len = offsetof(struct setDeviceRequest, peer1End) - offsetof(struct setDeviceRequest, peer1AllowedIpsAttr),
+            .nla_type = WGPEER_A_ALLOWEDIPS | NLA_F_NESTED
+        },
+        .peer1AllowedIpAttr = {
+            .nla_len = offsetof(struct setDeviceRequest, peer1End) - offsetof(struct setDeviceRequest, peer1AllowedIpAttr),
+            .nla_type = NLA_F_NESTED
+        },
+        .peer1AllowedIpFamilyAttr = {
+            .nla_len = sizeof(request.peer1AllowedIpFamilyAttr) + sizeof(uint16_t),
+            .nla_type = WGALLOWEDIP_A_FAMILY
+        },
+        .peer1AllowedIpFamily = AF_INET,
+        .peer1AllowedIpAddressAttr = {
+            .nla_len = sizeof(request.peer1AllowedIpAddressAttr) + sizeof(request.peer1AllowedIpAddress),
+            .nla_type = WGALLOWEDIP_A_IPADDR
+        },
+        .peer1AllowedIpAddress = config_WG_PEER1_ADDRESS,
+        .peer1AllowedIpNetmaskAttr = {
+            .nla_len = sizeof(request.peer1AllowedIpNetmaskAttr) + sizeof(uint8_t),
+            .nla_type = WGALLOWEDIP_A_CIDR_MASK
+        },
+        .peer1AllowedIpNetmask = 32
+    };
+    if (sys_getrandom(&request.privateKey, sizeof(request.privateKey), 0) < 0) return -1;
+    return netlink_talk(config.genetlinkFd, &request, sizeof(request));
+}
+
+static int32_t config_printWgPublicKey(void) {
+    struct getDeviceRequest {
+        struct nlmsghdr hdr;
+        struct genlmsghdr genHdr;
+        struct nlattr ifIndexAttr;
+        uint32_t ifIndex;
+    };
+    struct getDeviceRequest request = {
+        .hdr = {
+            .nlmsg_len = sizeof(request),
+            .nlmsg_type = config.wgFamilyId,
+            .nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP,
+            .nlmsg_seq = 1
+        },
+        .genHdr = {
+            .cmd = WG_CMD_GET_DEVICE,
+            .version = WG_GENL_VERSION
+        },
+        .ifIndexAttr = {
+            .nla_len = sizeof(request.ifIndexAttr) + sizeof(request.ifIndex),
+            .nla_type = WGDEVICE_A_IFINDEX
+        },
+        .ifIndex = config_WG_IF_INDEX
+    };
+    int32_t status = netlink_talk(config.genetlinkFd, &request, sizeof(request));
+    if (status < 0) {
+        debug_printNum("Get device request failed (", status, ")\n");
+        return -1;
+    }
+    // Iterate over all attributes, assume WGDEVICE_A_PUBLIC_KEY is one of them.
+    for (
+        struct nlattr *attr = (void *)&netlink_buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
+        attr = (void *)&((char *)attr)[util_ALIGN_FORWARD(attr->nla_len, 4)]
+    ) {
+        if (attr->nla_type == WGDEVICE_A_PUBLIC_KEY) {
+            hc_MEMCPY(config.wgPublicKey, (uint8_t *)&attr[1], 32);
+            break;
+        }
+    }
+
+    uint8_t base64PublicKey[base64_ENCODE_SIZE(32)];
+    base64_encode(&base64PublicKey[0], config.wgPublicKey, 32);
+    int64_t written = sys_writev(STDOUT_FILENO, (struct iovec[3]) {
+        { .iov_base = "Wireguard PK: ", .iov_len = 14 },
+        { .iov_base = &base64PublicKey[0], .iov_len = sizeof(base64PublicKey) },
+        { .iov_base = "\n", .iov_len = 1 }
+    }, 3);
+    if (written != 14 + sizeof(base64PublicKey) + 1) return -2;
+    return 0;
 }
 
 static int32_t config_configure(void) {
@@ -134,6 +382,24 @@ static int32_t config_configure(void) {
         return -1;
     }
 
+    status = config_setWgDevice();
+    if (status < 0) {
+        debug_printNum("Failed to set Wireguard device (", status, ")\n");
+        return -1;
+    }
+
+    status = config_printWgPublicKey();
+    if (status < 0) {
+        debug_printNum("Failed to print Wireguard public key (", status, ")\n");
+        return -1;
+    }
+
+    status = config_addWgPeer1Route();
+    if (status < 0) {
+        debug_printNum("Failed to add route (", status, ")\n");
+        return -1;
+    }
+
     // Enable routing.
     int32_t fd = sys_openat(-1, "/proc/sys/net/ipv4/ip_forward", O_WRONLY, 0);
     if (fd < 0) return -2;
@@ -144,5 +410,6 @@ static int32_t config_configure(void) {
 }
 
 static void config_deinit(void) {
-    netlink_deinit(&config.rtnetlink);
+    debug_CHECK(sys_close(config.rtnetlinkFd), == 0);
+    debug_CHECK(sys_close(config.genetlinkFd), == 0);
 }
