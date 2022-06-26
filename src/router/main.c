@@ -6,7 +6,7 @@
 #include "hc/linux/debug.c"
 #include "hc/linux/helpers/_start.c"
 
-#include "rtnetlink.c"
+#include "netlink.c"
 #include "config.c"
 
 int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
