@@ -17,8 +17,10 @@ struct config {
 static struct config config;
 
 static void config_init(void) {
-    CHECK(config.rtnetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE), RES > 0);
-    CHECK(config.genetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC), RES > 0);
+    config.rtnetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    CHECK(config.rtnetlinkFd, RES > 0);
+    config.genetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC);
+    CHECK(config.genetlinkFd, RES > 0);
 
     // Get wireguard family id.
     struct getFamilyRequest {
