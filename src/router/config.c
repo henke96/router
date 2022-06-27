@@ -360,7 +360,7 @@ static void config_configure(void) {
 
     // Enable routing.
     int32_t fd = sys_openat(-1, "/proc/sys/net/ipv4/ip_forward", O_WRONLY, 0);
-    CHECK(fd, RES >= 0);
+    CHECK(fd, RES > 0);
     CHECK(sys_write(fd, "1", 1), RES == 1);
     debug_CHECK(sys_close(fd), RES == 0);
 }
