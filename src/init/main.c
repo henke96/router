@@ -74,6 +74,7 @@ int32_t main(int32_t argc, char **argv) {
     }
 
     halt:
+    if (sys_umount2("/", 0) < 0) sys_write(STDOUT_FILENO, "Failed to umount /\n", 20);
     sys_sync();
     sys_reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, LINUX_REBOOT_CMD_HALT, NULL);
     return 0;

@@ -4,12 +4,11 @@ set -e
 
 cleanup() {
     set +e
-    umount mnt/boot
-    umount mnt/primary
+    umount mnt/
     losetup -d $dev
 }
 
-dd if=/dev/zero of=disk.img bs=512 count=204800
+dd if=/dev/zero of=disk.img bs=1048576 count=16
 
 dev="$(losetup --show -f disk.img)"
 trap cleanup EXIT
@@ -17,31 +16,27 @@ trap cleanup EXIT
 # Create partitions and filesystems.
 parted -s $dev \
 mklabel gpt \
-mkpart EFI 1Mib 34Mib set 1 esp on \
-mkpart Primary 34Mib 99Mib
+mkpart Primary 2048s 100% set 1 esp on
 
-mkfs -t fat -F 32 ${dev}p1
-mkfs -t ext4 ${dev}p2
+mkfs -t fat -F 16 ${dev}p1
 
 # Mount the disk.
-mkdir -p mnt/boot
-mount ${dev}p1 mnt/boot
-mkdir -p mnt/primary
-mount ${dev}p2 mnt/primary
+mkdir -p mnt/
+mount ${dev}p1 mnt/
 echo "Disk device is: $dev"
 
 # Install kernel.
-mkdir -p mnt/boot/EFI/BOOT
-cp linux/linux*/arch/x86/boot/bzImage mnt/boot/EFI/BOOT/BOOTX64.EFI
+mkdir -p mnt/EFI/BOOT
+cp linux/linux*/arch/x86/boot/bzImage mnt/EFI/BOOT/BOOTX64.EFI
 
 # Install directories.
-mkdir -p mnt/primary/dev
-mkdir -p mnt/primary/proc
-mkdir -p mnt/primary/bin
+mkdir -p mnt/dev
+mkdir -p mnt/proc
+mkdir -p mnt/bin
 
 # Install binaries.
-cp src/init/release.bin mnt/primary/bin/init
-cp src/router/release.bin mnt/primary/bin/router
+cp src/init/release.bin mnt/bin/init
+cp src/router/release.bin mnt/bin/router
 
 if test -n "$1"
 then

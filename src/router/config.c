@@ -16,15 +16,9 @@ struct config {
 
 static struct config config;
 
-static int32_t config_init(void) {
-    config.rtnetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-    if (config.rtnetlinkFd < 0) return -1;
-    int32_t status;
-    config.genetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC);
-    if (config.genetlinkFd < 0) {
-        status = -1;
-        goto cleanup_rtnetlinkFd;
-    }
+static void config_init(void) {
+    CHECK(config.rtnetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE), RES > 0);
+    CHECK(config.genetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC), RES > 0);
 
     // Get wireguard family id.
     struct getFamilyRequest {
@@ -50,12 +44,8 @@ static int32_t config_init(void) {
         },
         .familyName = WG_GENL_NAME
     };
-    status = netlink_talk(config.genetlinkFd, &request, sizeof(request));
-    if (status < 0) {
-        debug_printNum("Get family request failed (", status, ")\n");
-        status = -2;
-        goto cleanup_genetlinkFd;
-    }
+    CHECK(netlink_talk(config.genetlinkFd, &request, sizeof(request)), RES == 0);
+
     // Iterate over all attributes, assume CTRL_ATTR_FAMILY_ID is one of them.
     for (
         struct nlattr *attr = (void *)&netlink_buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
@@ -66,16 +56,9 @@ static int32_t config_init(void) {
             break;
         }
     }
-    return 0;
-
-    cleanup_genetlinkFd:
-    debug_CHECK(sys_close(config.genetlinkFd), == 0);
-    cleanup_rtnetlinkFd:
-    debug_CHECK(sys_close(config.rtnetlinkFd), == 0);
-    return status;
 }
 
-static int32_t config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen) {
+static void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen) {
     struct addrRequest {
         struct nlmsghdr hdr;
         struct ifaddrmsg addrMsg;
@@ -99,10 +82,10 @@ static int32_t config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixL
         }
     };
     hc_MEMCPY(&request.address, address, sizeof(request.address));
-    return netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+    CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
 }
 
-static int32_t config_bringUp(uint8_t ifIndex) {
+static void config_bringUp(uint8_t ifIndex) {
     struct linkRequest {
         struct nlmsghdr hdr;
         struct ifinfomsg ifInfo;
@@ -121,10 +104,10 @@ static int32_t config_bringUp(uint8_t ifIndex) {
             .ifi_change = 0xFFFFFFFF
         }
     };
-    return netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+    CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
 }
 
-static int32_t config_addWgPeer1Route(void) {
+static void config_addWgPeer1Route(void) {
     struct addRouteRequest {
         struct nlmsghdr hdr;
         struct rtmsg rtmsg;
@@ -161,10 +144,10 @@ static int32_t config_addWgPeer1Route(void) {
         },
         .outIfIndex = config_WG_IF_INDEX
     };
-    return netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+    CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
 }
 
-static int32_t config_addWireguardIf(void) {
+static void config_addWireguardIf(void) {
     struct linkRequest {
         struct nlmsghdr hdr;
         struct ifinfomsg ifInfo;
@@ -204,10 +187,10 @@ static int32_t config_addWireguardIf(void) {
         },
         .infoKind = WG_GENL_NAME
     };
-    return netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+    CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
 }
 
-static int32_t config_setWgDevice(void) {
+static void config_setWgDevice(void) {
     struct setDeviceRequest {
         struct nlmsghdr hdr;
         struct genlmsghdr genHdr;
@@ -293,11 +276,23 @@ static int32_t config_setWgDevice(void) {
         },
         .peer1AllowedIpNetmask = 32
     };
-    if (sys_getrandom(&request.privateKey, sizeof(request.privateKey), 0) < 0) return -1;
-    return netlink_talk(config.genetlinkFd, &request, sizeof(request));
+    // Read private key from /wgprivate, or generate it if file doesn't exist.
+    int32_t fd = sys_openat(-1, "/wgprivate", O_RDONLY, 0);
+    CHECK(fd, RES > 0 || RES == -ENOENT);
+    if (fd > 0) {
+        CHECK(sys_read(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
+    } else {
+        // Generate key and write to file.
+        CHECK(sys_getrandom(&request.privateKey, sizeof(request.privateKey), 0), RES == sizeof(request.privateKey));
+        fd = sys_openat(-1, "/wgprivate", O_WRONLY | O_CREAT | O_EXCL, S_IRUSR);
+        CHECK(fd, RES > 0);
+        CHECK(sys_write(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
+    }
+    debug_CHECK(sys_close(fd), RES == 0);
+    CHECK(netlink_talk(config.genetlinkFd, &request, sizeof(request)), RES == 0);
 }
 
-static int32_t config_printWgPublicKey(void) {
+static void config_printWgPublicKey(void) {
     struct getDeviceRequest {
         struct nlmsghdr hdr;
         struct genlmsghdr genHdr;
@@ -321,11 +316,8 @@ static int32_t config_printWgPublicKey(void) {
         },
         .ifIndex = config_WG_IF_INDEX
     };
-    int32_t status = netlink_talk(config.genetlinkFd, &request, sizeof(request));
-    if (status < 0) {
-        debug_printNum("Get device request failed (", status, ")\n");
-        return -1;
-    }
+    CHECK(netlink_talk(config.genetlinkFd, &request, sizeof(request)), RES == 0);
+
     // Iterate over all attributes, assume WGDEVICE_A_PUBLIC_KEY is one of them.
     for (
         struct nlattr *attr = (void *)&netlink_buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
@@ -344,72 +336,34 @@ static int32_t config_printWgPublicKey(void) {
         { .iov_base = &base64PublicKey[0], .iov_len = sizeof(base64PublicKey) },
         { .iov_base = "\n", .iov_len = 1 }
     }, 3);
-    if (written != 14 + sizeof(base64PublicKey) + 1) return -2;
-    return 0;
+    CHECK(written, RES == 14 + sizeof(base64PublicKey) + 1);
 }
 
-static int32_t config_configure(void) {
+static void config_configure(void) {
     // eth0
     uint8_t if2Address[] = { 10, 8, 16, 1 };
-    int32_t status = config_addIpv4(2, &if2Address[0], 24);
-    if (status < 0) {
-        debug_printNum("Failed to add if2 address (", status, ")\n");
-        return -1;
-    }
-    status = config_bringUp(2);
-    if (status < 0) {
-        debug_printNum("Failed to bring up if2 (", status, ")\n");
-        return -1;
-    }
+    config_addIpv4(2, &if2Address[0], 24);
+    config_bringUp(2);
 
     // eth1
     uint8_t if3Address[] = { 10, 8, 49, 1 };
-    status = config_addIpv4(3, &if3Address[0], 24);
-    if (status < 0) {
-        debug_printNum("Failed to add if3 address (", status, ")\n");
-        return -1;
-    }
-    status = config_bringUp(3);
-    if (status < 0) {
-        debug_printNum("Failed to bring up if3 (", status, ")\n");
-        return -1;
-    }
+    config_addIpv4(3, &if3Address[0], 24);
+    config_bringUp(3);
 
     // wg0
-    status = config_addWireguardIf();
-    if (status < 0) {
-        debug_printNum("Failed to add Wireguard if (", status, ")\n");
-        return -1;
-    }
-
-    status = config_setWgDevice();
-    if (status < 0) {
-        debug_printNum("Failed to set Wireguard device (", status, ")\n");
-        return -1;
-    }
-
-    status = config_printWgPublicKey();
-    if (status < 0) {
-        debug_printNum("Failed to print Wireguard public key (", status, ")\n");
-        return -1;
-    }
-
-    status = config_addWgPeer1Route();
-    if (status < 0) {
-        debug_printNum("Failed to add route (", status, ")\n");
-        return -1;
-    }
+    config_addWireguardIf();
+    config_setWgDevice();
+    config_printWgPublicKey();
+    config_addWgPeer1Route();
 
     // Enable routing.
     int32_t fd = sys_openat(-1, "/proc/sys/net/ipv4/ip_forward", O_WRONLY, 0);
-    if (fd < 0) return -2;
-    int64_t written = sys_write(fd, "1", 1);
-    sys_close(fd);
-    if (written != 1) return -3;
-    return 0;
+    CHECK(fd, RES >= 0);
+    CHECK(sys_write(fd, "1", 1), RES == 1);
+    debug_CHECK(sys_close(fd), RES == 0);
 }
 
 static void config_deinit(void) {
-    debug_CHECK(sys_close(config.rtnetlinkFd), == 0);
-    debug_CHECK(sys_close(config.genetlinkFd), == 0);
+    debug_CHECK(sys_close(config.rtnetlinkFd), RES == 0);
+    debug_CHECK(sys_close(config.genetlinkFd), RES == 0);
 }
