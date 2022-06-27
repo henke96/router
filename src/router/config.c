@@ -38,7 +38,7 @@ static void config_init(void) {
         },
         .genHdr = {
             .cmd = CTRL_CMD_GETFAMILY,
-            .version = WG_GENL_VERSION
+            .version = 1
         },
         .familyNameAttr = {
             .nla_len = sizeof(request.familyNameAttr) + sizeof(request.familyName),

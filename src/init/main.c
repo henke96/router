@@ -26,6 +26,7 @@ static int32_t initialise(void) {
 }
 
 int32_t main(int32_t argc, char **argv) {
+    bool cleanExit = false;
     int32_t status = initialise();
     if (status < 0) {
         char buffer[util_INT32_MAX_CHARS];
@@ -71,11 +72,18 @@ int32_t main(int32_t argc, char **argv) {
             { .iov_base = maxRssStr, .iov_len = (int64_t)(&maxRssBuffer[util_INT64_MAX_CHARS] - maxRssStr) },
             { .iov_base = ")\n", .iov_len = 2 }
         }, 7);
+
+        // Currently we only have the router process, so shutdown if it exits.
+        if (status == 0) cleanExit = true;
+        goto halt;
     }
 
     halt:
-    if (sys_umount2("/", 0) < 0) sys_write(STDOUT_FILENO, "Failed to umount /\n", 20);
+    if (sys_umount2("/", 0) < 0) {
+        sys_write(STDOUT_FILENO, "Failed to umount /\n", 20);
+        cleanExit = false;
+    }
     sys_sync();
-    sys_reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, LINUX_REBOOT_CMD_HALT, NULL);
+    sys_reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, cleanExit ? LINUX_REBOOT_CMD_POWER_OFF : LINUX_REBOOT_CMD_HALT, NULL);
     return 0;
 }
