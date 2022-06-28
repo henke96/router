@@ -9,6 +9,7 @@ cleanup() {
 }
 
 dd if=/dev/zero of=disk.img bs=1048576 count=16
+dd if=/dev/zero of=disk2.img bs=1048576 count=16
 
 dev="$(losetup --show -f disk.img)"
 trap cleanup EXIT
@@ -32,6 +33,8 @@ cp linux/linux*/arch/x86/boot/bzImage mnt/EFI/BOOT/BOOTX64.EFI
 # Install directories.
 mkdir -p mnt/dev
 mkdir -p mnt/proc
+mkdir -p mnt/sys
+mkdir -p mnt/mnt
 mkdir -p mnt/bin
 
 # Install binaries.

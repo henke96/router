@@ -8,7 +8,7 @@ cleanup() {
     ip link del qemu2
 }
 
-qemu_cmd="qemu-system-x86_64 -bios /usr/share/qemu/OVMF.fd -drive format=raw,file=disk.img -enable-kvm"
+qemu_cmd="qemu-system-x86_64 -bios /usr/share/qemu/OVMF.fd -drive format=raw,file=disk.img -drive format=raw,file=disk2.img,if=none,id=nvm -device nvme,serial=deadbeef,drive=nvm -enable-kvm"
 trap cleanup EXIT
 trap "" INT # Make sure cleanup gets run on Ctrl-C.
 
