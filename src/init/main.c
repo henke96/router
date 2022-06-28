@@ -167,7 +167,7 @@ static int32_t handleInstallation(void) {
 
             // Mount it!
             end[5 + nameLen] = '\0';
-            if (sys_mount(&end[0], "/mnt", "vfat", MS_NOATIME, NULL) < 0) return -17;
+            if (sys_mount(&end[0], "/mnt", "msdos", MS_NOATIME, NULL) < 0) return -17;
             goto found;
         }
     }

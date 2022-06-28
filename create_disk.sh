@@ -8,7 +8,7 @@ cleanup() {
     losetup -d $dev
 }
 
-dd if=/dev/zero of=disk.img bs=1048576 count=16
+dd if=/dev/zero of=disk.img bs=1048576 count=8
 dd if=/dev/zero of=disk2.img bs=1048576 count=16
 
 dev="$(losetup --show -f disk.img)"
@@ -19,7 +19,7 @@ parted -s $dev \
 mklabel gpt \
 mkpart Primary 2048s 100% set 1 esp on
 
-mkfs -t fat -F 16 ${dev}p1
+mkfs -t fat -F 12 ${dev}p1
 
 # Mount the disk.
 mkdir -p mnt/
