@@ -7,6 +7,8 @@
 #include "hc/linux/debug.c"
 #include "hc/linux/helpers/_start.c"
 
+static char buffer[4096];
+
 static int32_t initialise(void) {
     if (sys_mount("", "/proc", "proc", 0, NULL) < 0) return -1;
 
@@ -29,8 +31,8 @@ static int32_t initialise(void) {
 }
 
 // If `majorDev` is 0, all devices are printed, otherwise the
-// path to the device is written to `buffer` (which should be 4096 bytes).
-static int32_t iterateDevices(uint32_t majorDev, uint32_t minorDev, char *buffer) {
+// path to the device is written to `buffer`.
+static int32_t iterateDevices(uint32_t majorDev, uint32_t minorDev) {
     int32_t devFd = sys_openat(-1, "/dev", O_RDONLY, 0);
     if (devFd < 0) return -1;
 
@@ -61,6 +63,10 @@ static int32_t iterateDevices(uint32_t majorDev, uint32_t minorDev, char *buffer
             if (sys_faccessat(-1, &end[0], 0) != 0) continue;
 
             if (majorDev == 0) { // Just print.
+                // Don't print partitions.
+                hc_MEMCPY(&end[17 + nameLen], "/partition", 11);
+                if (sys_faccessat(-1, &end[0], 0) == 0) continue;
+
                 sys_writev(STDOUT_FILENO, (struct iovec[2]) {
                     { .iov_base = "  /dev/", .iov_len = 7 },
                     { .iov_base = &end[17], .iov_len = nameLen }
@@ -91,8 +97,6 @@ static int32_t iterateDevices(uint32_t majorDev, uint32_t minorDev, char *buffer
 }
 
 static int32_t handleInstallation(void) {
-    char buffer[4096];
-
     // Check if /install exists.
     int32_t fd = sys_openat(-1, "/install", O_RDONLY, 0);
     if (fd < 0) {
@@ -103,7 +107,7 @@ static int32_t handleInstallation(void) {
     // Read destination device name and open destFd.
     int64_t numRead = sys_read(fd, &buffer[0], sizeof(buffer) - 1);
     if (numRead == 0) {
-        if (iterateDevices(0, 0, &buffer[0]) < 0) return -2;
+        if (iterateDevices(0, 0) < 0) return -2;
         sys_write(STDOUT_FILENO, "\nInstall on: ", 13);
         numRead = sys_read(STDIN_FILENO, &buffer[0], sizeof(buffer));
     }
@@ -124,7 +128,7 @@ static int32_t handleInstallation(void) {
     // Find root drive and open sourceFd.
     struct statx statx;
     if (sys_statx(-1, "/", 0, 0, &statx) < 0) return -7;
-    if (iterateDevices(statx.stx_dev_major, statx.stx_dev_minor, &buffer[0]) < 0) return -8;
+    if (iterateDevices(statx.stx_dev_major, statx.stx_dev_minor) < 0) return -8;
 
     int32_t sourceFd = sys_openat(-1, &buffer[0], O_RDONLY, 0);
     if (sourceFd < 0) return -9;
@@ -221,19 +225,19 @@ int32_t main(int32_t argc, char **argv) {
         int32_t pid = sys_wait4(-1, &status, 0, &rusage);
         if (pid < 0) goto halt;
 
-        char pidBuffer[util_INT32_MAX_CHARS];
-        char statusBuffer[util_INT32_MAX_CHARS];
-        char maxRssBuffer[util_INT64_MAX_CHARS];
-        char *pidStr = util_intToStr(&pidBuffer[util_INT32_MAX_CHARS], pid);
-        char *statusStr = util_intToStr(&statusBuffer[util_INT32_MAX_CHARS], status);
-        char *maxRssStr = util_intToStr(&maxRssBuffer[util_INT64_MAX_CHARS], rusage.ru_maxrss);
+        #define PID_END util_INT32_MAX_CHARS
+        #define STATUS_END (PID_END + util_INT32_MAX_CHARS)
+        #define MAXRSS_END (STATUS_END + util_INT64_MAX_CHARS)
+        char *pidStr = util_intToStr(&buffer[PID_END], pid);
+        char *statusStr = util_intToStr(&buffer[STATUS_END], status);
+        char *maxRssStr = util_intToStr(&buffer[MAXRSS_END], rusage.ru_maxrss);
         sys_writev(STDOUT_FILENO, (struct iovec[7]) {
             { .iov_base = "Pid ", .iov_len = 4 },
-            { .iov_base = pidStr, .iov_len = (int64_t)(&pidBuffer[util_INT32_MAX_CHARS] - pidStr) },
+            { .iov_base = pidStr, .iov_len = (int64_t)(&buffer[PID_END] - pidStr) },
             { .iov_base = " exited (status=", .iov_len = 16 },
-            { .iov_base = statusStr, .iov_len = (int64_t)(&statusBuffer[util_INT32_MAX_CHARS] - statusStr) },
+            { .iov_base = statusStr, .iov_len = (int64_t)(&buffer[STATUS_END] - statusStr) },
             { .iov_base = ", maxRss=", .iov_len = 9 },
-            { .iov_base = maxRssStr, .iov_len = (int64_t)(&maxRssBuffer[util_INT64_MAX_CHARS] - maxRssStr) },
+            { .iov_base = maxRssStr, .iov_len = (int64_t)(&buffer[MAXRSS_END] - maxRssStr) },
             { .iov_base = ")\n", .iov_len = 2 }
         }, 7);
 

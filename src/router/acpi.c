@@ -37,7 +37,7 @@ static void acpi_init(void) {
     CHECK(netlink_talk(acpi.netlinkFd, &request, sizeof(request)), RES == 0);
 
     for (
-        struct nlattr *attr = (void *)&netlink_buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
+        struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
         attr = (void *)&((char *)attr)[util_ALIGN_FORWARD(attr->nla_len, 4)]
     ) {
         if (attr->nla_type == CTRL_ATTR_FAMILY_ID) {

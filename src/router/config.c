@@ -50,7 +50,7 @@ static void config_init(void) {
 
     // Iterate over all attributes, assume CTRL_ATTR_FAMILY_ID is one of them.
     for (
-        struct nlattr *attr = (void *)&netlink_buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
+        struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
         attr = (void *)&((char *)attr)[util_ALIGN_FORWARD(attr->nla_len, 4)]
     ) {
         if (attr->nla_type == CTRL_ATTR_FAMILY_ID) {
@@ -322,7 +322,7 @@ static void config_printWgPublicKey(void) {
 
     // Iterate over all attributes, assume WGDEVICE_A_PUBLIC_KEY is one of them.
     for (
-        struct nlattr *attr = (void *)&netlink_buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
+        struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
         attr = (void *)&((char *)attr)[util_ALIGN_FORWARD(attr->nla_len, 4)]
     ) {
         if (attr->nla_type == WGDEVICE_A_PUBLIC_KEY) {
@@ -343,8 +343,6 @@ static void config_printWgPublicKey(void) {
 
 static void config_configure(void) {
     // eth0
-    uint8_t if2Address[] = { 10, 8, 16, 1 };
-    config_addIpv4(2, &if2Address[0], 24);
     config_bringUp(2);
 
     // eth1
