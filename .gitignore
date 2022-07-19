@@ -1,3 +1,4 @@
 /mnt
 *.bin*
+*.efi*
 *.img

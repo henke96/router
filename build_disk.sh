@@ -1,6 +1,11 @@
 #!/bin/sh
-# Usage: ./create_disk.sh [INSTALL_COMMAND]
+# Usage: ./build_disk.sh [INSTALL_COMMAND]
 set -e
+
+# Build everything in src/
+src/bootloader/build.sh
+src/init/build.sh
+src/router/build.sh
 
 cleanup() {
     set +e
@@ -17,7 +22,7 @@ trap cleanup EXIT
 # Create partitions and filesystems.
 parted -s $dev \
 mklabel gpt \
-mkpart Primary 2048s 100% set 1 esp on
+mkpart Router 2048s 100% set 1 esp on
 
 mkfs -t fat -F 12 ${dev}p1
 
@@ -28,7 +33,7 @@ echo "Disk device is: $dev"
 
 # Install kernel.
 mkdir -p mnt/EFI/BOOT
-cp linux/linux*/arch/x86/boot/bzImage mnt/EFI/BOOT/BOOTX64.EFI
+cp src/bootloader/bootloader.efi mnt/EFI/BOOT/BOOTX64.EFI
 
 # Install directories.
 mkdir -p mnt/dev
