@@ -22,39 +22,27 @@ int64_t main(void *imageHandle, struct efi_systemTable *systemTable) {
         if (devicePathProtocol->type == 4 && devicePathProtocol->subType == 1) { // Hard drive partition.
             struct efi_devicePathProtocol_mediaDevicePath *mediaDevicePath = (void *)devicePathProtocol;
             if (mediaDevicePath->signatureType == 2) { // GUID signature.
-                // Write it to the command line. Ugly.
+                // Write GUID to Linux command line.
+                const struct {
+                    int8_t start;
+                    int8_t end;
+                    int8_t step;
+                } guidPrint[5] = { { 9, 15, 1 }, { 7, 9, 1 }, { 8, 6, -1 }, { 6, 4, -1 }, { 4, 0, -1 } };
+
                 uint16_t *current = &linuxCmdLine[linuxCmdLine_GUID_START];
-                int32_t i = 4;
-                do {
+                int32_t i = 5;
+                for (;;) {
                     --i;
-                    uint8_t byte = mediaDevicePath->partitionSignature[i];
-                    *current++ = hexTable[byte >> 4];
-                    *current++ = hexTable[byte & 0xF];
-                } while (i);
-                *current++ = '-';
-                i = 2;
-                do {
-                    --i;
-                    uint8_t byte = mediaDevicePath->partitionSignature[4 + i];
-                    *current++ = hexTable[byte >> 4];
-                    *current++ = hexTable[byte & 0xF];
-                } while (i);
-                *current++ = '-';
-                i = 2;
-                do {
-                    --i;
-                    uint8_t byte = mediaDevicePath->partitionSignature[6 + i];
-                    *current++ = hexTable[byte >> 4];
-                    *current++ = hexTable[byte & 0xF];
-                } while (i);
-                *current++ = '-';
-                for (; i < 8; ++i) {
-                    uint8_t byte = mediaDevicePath->partitionSignature[8 + i];
-                    *current++ = hexTable[byte >> 4];
-                    *current++ = hexTable[byte & 0xF];
-                    if (i == 1) *current++ = '-';
+                    int32_t readIndex = guidPrint[i].start;
+                    do {
+                        readIndex += guidPrint[i].step;
+                        uint8_t byte = mediaDevicePath->partitionSignature[readIndex];
+                        *current++ = hexTable[byte >> 4];
+                        *current++ = hexTable[byte & 0xF];
+                    } while (readIndex != guidPrint[i].end);
+                    if (i != 0) *current++ = '-';
+                    else goto foundPartitionGuid;
                 }
-                goto foundPartitionGuid;
             }
         }
         uint16_t length;
