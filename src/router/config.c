@@ -2,7 +2,7 @@
 #define config_WG_IF_INDEX 123
 // Try to use a port that is unlikely to be blocked by firewalls.
 #define config_WG_LISTEN_PORT 123
-#define config_WG_PEER1_ADDRESS { 10, 1, 2, 3 }
+#define config_WG_PEER1_ADDRESS { 10, 123, 1, 1 }
 // Generate with `echo <base64-public-key> | base64 --decode | xxd -i -c 256`
 #define config_WG_PEER1_PUBLIC_KEY { 0xd0, 0xe1, 0x80, 0xab, 0x2e, 0xec, 0xa9, 0x4f, 0x2a, 0x0c, 0xf1, 0xaa, 0xcc, 0xa3, 0x02, 0x78, 0x9d, 0xed, 0x4e, 0x31, 0x29, 0x95, 0x81, 0x45, 0x3c, 0x86, 0x00, 0x9e, 0xf3, 0xd7, 0xe7, 0x23 }
 
@@ -346,7 +346,7 @@ static void config_configure(void) {
     config_bringUp(2);
 
     // eth1
-    uint8_t if3Address[] = { 10, 8, 49, 1 };
+    uint8_t if3Address[] = { 10, 123, 0, 1 };
     config_addIpv4(3, &if3Address[0], 24);
     config_bringUp(3);
 

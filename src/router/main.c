@@ -17,6 +17,7 @@ static char buffer[8192]; // See NLMSG_GOODSIZE in <linux/netlink.h>
 #include "acpi.c"
 #include "config.c"
 #include "dhcpClient.c"
+#include "iptables.c"
 
 int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     acpi_init();
@@ -24,6 +25,7 @@ int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     config_configure();
 
     dhcpClient_init();
+    iptables_configure();
 
     // Setup epoll.
     int32_t epollFd = sys_epoll_create1(0);
