@@ -5,7 +5,7 @@
 #include "linuxBin.c"
 
 #define linuxCmdLine_GUID_START 14
-static uint16_t linuxCmdLine[] = u"root=PARTUUID=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0 rootwait mitigations=off";
+static uint16_t linuxCmdLine[] = u"root=PARTUUID=\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0 rootwait mitigations=off video=efifb:width:800,height:480";
 static const uint8_t hexTable[16] = "0123456789abcdef";
 
 int64_t main(void *imageHandle, struct efi_systemTable *systemTable) {

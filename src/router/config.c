@@ -4,7 +4,7 @@
 #define config_WG_LISTEN_PORT 123
 #define config_WG_PEER1_ADDRESS { 10, 123, 1, 1 }
 // Generate with `echo <base64-public-key> | base64 --decode | xxd -i -c 256`
-#define config_WG_PEER1_PUBLIC_KEY { 0xd0, 0xe1, 0x80, 0xab, 0x2e, 0xec, 0xa9, 0x4f, 0x2a, 0x0c, 0xf1, 0xaa, 0xcc, 0xa3, 0x02, 0x78, 0x9d, 0xed, 0x4e, 0x31, 0x29, 0x95, 0x81, 0x45, 0x3c, 0x86, 0x00, 0x9e, 0xf3, 0xd7, 0xe7, 0x23 }
+#define config_WG_PEER1_PUBLIC_KEY { 0xb4, 0x9d, 0x1d, 0xd5, 0x50, 0x61, 0x5a, 0xa8, 0xf0, 0x49, 0xd0, 0x78, 0x66, 0x70, 0x09, 0xfc, 0x92, 0x56, 0xd2, 0xfa, 0x0c, 0x18, 0x29, 0x22, 0xa7, 0x7f, 0x5e, 0xff, 0x21, 0x71, 0x36, 0x5d }
 
 struct config {
     int32_t rtnetlinkFd;
@@ -278,15 +278,15 @@ static void config_setWgDevice(void) {
         },
         .peer1AllowedIpNetmask = 32
     };
-    // Read private key from /wgprivate, or generate it if file doesn't exist.
-    int32_t fd = sys_openat(-1, "/wgprivate", O_RDONLY, 0);
+    // Read private key from /wgkey, or generate it if file doesn't exist.
+    int32_t fd = sys_openat(-1, "/wgkey", O_RDONLY, 0);
     CHECK(fd, RES > 0 || RES == -ENOENT);
     if (fd > 0) {
         CHECK(sys_read(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
     } else {
         // Generate key and write to file.
         CHECK(sys_getrandom(&request.privateKey, sizeof(request.privateKey), 0), RES == sizeof(request.privateKey));
-        fd = sys_openat(-1, "/wgprivate", O_WRONLY | O_CREAT | O_EXCL, S_IRUSR);
+        fd = sys_openat(-1, "/wgkey", O_WRONLY | O_CREAT | O_EXCL, S_IRUSR);
         CHECK(fd, RES > 0);
         CHECK(sys_write(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
     }
