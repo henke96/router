@@ -2,6 +2,8 @@
 # Usage: ./build_disk.sh [INSTALL_COMMAND]
 set -e
 
+TYPE="${TYPE:-release}"
+
 # Build everything in src/
 src/bootloader/build.sh
 src/init/build.sh
@@ -43,8 +45,8 @@ mkdir -p mnt/mnt
 mkdir -p mnt/bin
 
 # Install binaries.
-cp src/init/release.bin mnt/bin/init
-cp src/router/release.bin mnt/bin/router
+cp src/init/$TYPE.bin mnt/bin/init
+cp src/router/$TYPE.bin mnt/bin/router
 
 if test -n "$1"
 then

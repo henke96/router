@@ -4,9 +4,11 @@ struct dhcpClient {
     struct ifreq ifreq; // ifr_name and ifr_addr.
     int32_t fd;
     int32_t timerFd;
+    int32_t dnsIp; // 0 if none.
+    int32_t __pad;
 };
 
-static struct dhcpClient dhcpClient;
+static struct dhcpClient dhcpClient = { 0 };
 
 static void dhcpClient_init(void) {
     CHECK(dhcpClient.fd = sys_socket(AF_INET, SOCK_DGRAM, 0), RES > 0);
@@ -109,7 +111,6 @@ static void dhcpClient_onMessage(void) {
     struct dhcp_option *messageType = NULL;
     struct dhcp_option *subnetMask = NULL;
     struct dhcp_option *router = NULL;
-    hc_UNUSED // TODO
     struct dhcp_option *dns = NULL;
     struct dhcp_option *leaseTime = NULL;
     for (struct dhcp_option *current = (void *)&header->options[0];;) {
@@ -218,7 +219,11 @@ static void dhcpClient_onMessage(void) {
             break;
         }
         case dhcp_ACK: {
-            if (subnetMask == NULL || router == NULL || leaseTime == NULL) return; // `dns` is optional.
+            if (subnetMask == NULL || router == NULL || leaseTime == NULL) return;
+            if (dns != NULL) {
+                hc_MEMCPY(&dhcpClient.dnsIp, &dns->data[0], 4);
+            } else dhcpClient.dnsIp = 0;
+
             uint32_t leaseTimeValue;
             hc_MEMCPY(&leaseTimeValue, &leaseTime->data[0], 4);
             leaseTimeValue = hc_BSWAP32(leaseTimeValue);
