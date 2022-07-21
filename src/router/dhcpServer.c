@@ -43,7 +43,7 @@ static int32_t dhcpServer_getEntry(struct dhcpServer *self, uint8_t *macAddr, bo
 
     if (!allowCreate) return -1;
 
-    hc_MEMCPY(&self->entries[i].macAddr[0], &macAddr[0], 6);
+    hc_MEMCPY(&self->entries[oldestIndex].macAddr[0], &macAddr[0], 6);
     self->entries[oldestIndex].timeSec = currentTime.tv_sec;
     return oldestIndex;
 }
