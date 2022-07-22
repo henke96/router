@@ -8,6 +8,8 @@ struct dhcpClient {
     int32_t timerFd;
     int32_t dnsIp; // 0 if none.
     uint32_t currentIdentifier;
+    uint8_t lastLeasedIp[4];
+    int32_t __pad;
 };
 
 static struct dhcpClient dhcpClient = { 0 };
@@ -258,6 +260,26 @@ static void dhcpClient_onMessage(void) {
             uint32_t netmask;
             hc_MEMCPY(&netmask, &subnetMask->data[0], 4);
 
+            // Print any IP changes.
+            if (hc_MEMCMP(&dhcpClient.lastLeasedIp, &header->yourIp[0], 4) != 0) {
+                char *octet1 = util_intToStr(&buffer[3], header->yourIp[0]);
+                char *octet2 = util_intToStr(&buffer[6], header->yourIp[1]);
+                char *octet3 = util_intToStr(&buffer[9], header->yourIp[2]);
+                char *octet4 = util_intToStr(&buffer[12], header->yourIp[3]);
+                sys_writev(STDOUT_FILENO, (struct iovec[9]) {
+                    { .iov_base = "New IP leased: ", .iov_len = 15 },
+                    { .iov_base = octet1, .iov_len = (int64_t)(&buffer[3] - octet1) },
+                    { .iov_base = ".", .iov_len = 1 },
+                    { .iov_base = octet2, .iov_len = (int64_t)(&buffer[6] - octet2) },
+                    { .iov_base = ".", .iov_len = 1 },
+                    { .iov_base = octet3, .iov_len = (int64_t)(&buffer[9] - octet3) },
+                    { .iov_base = ".", .iov_len = 1 },
+                    { .iov_base = octet4, .iov_len = (int64_t)(&buffer[12] - octet4) },
+                    { .iov_base = "\n", .iov_len = 1 }
+                }, 9);
+                hc_MEMCPY(&dhcpClient.lastLeasedIp, &header->yourIp[0], 4);
+            }
+
             // Add the address.
             {
                 struct addrRequest {
@@ -292,7 +314,7 @@ static void dhcpClient_onMessage(void) {
                         .ifa_valid = leaseTimeValue
                     }
                 };
-                hc_MEMCPY(&request.address, header->yourIp, sizeof(request.address));
+                hc_MEMCPY(&request.address, &header->yourIp[0], 4);
                 CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
             }
 
