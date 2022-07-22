@@ -1,11 +1,13 @@
 #define dhcp_IFINDEX 2
+// Can't be 0.0.0.0 unfortunately, or Linux replaces it.
+#define dhcp_SOURCE_IP { 10, 123, 0, 1 }
 
 struct dhcpClient {
     struct ifreq ifreq; // ifr_name and ifr_addr.
     int32_t fd;
     int32_t timerFd;
     int32_t dnsIp; // 0 if none.
-    int32_t __pad;
+    uint32_t currentIdentifier;
 };
 
 static struct dhcpClient dhcpClient = { 0 };
@@ -33,11 +35,40 @@ static void dhcpClient_init(void) {
     };
     CHECK(sys_bind(dhcpClient.fd, &addr, sizeof(addr)), RES == 0);
 
-    // Create timer fd, and set instant timeout.
+    // Create timer fd, and set initial timeout.
     CHECK(dhcpClient.timerFd = sys_timerfd_create(CLOCK_MONOTONIC, 0), RES > 0);
 
-    struct itimerspec timeout = { .it_value = { .tv_nsec = 1 } };
+    struct itimerspec timeout = { .it_value = { .tv_sec = 10 } };
     CHECK(sys_timerfd_settime(dhcpClient.timerFd, 0, &timeout, NULL), RES == 0);
+}
+
+static void dhcpClient_broadcastPacket(void *payload, int64_t size) {
+    struct {
+        struct cmsghdr cmsghdr;
+        struct in_pktinfo pktinfo;
+        int32_t __pad;
+    } cmsg = {
+        .cmsghdr = {
+            .cmsg_len = sizeof(cmsg.cmsghdr) + sizeof(cmsg.pktinfo),
+            .cmsg_level = IPPROTO_IP,
+            .cmsg_type = IP_PKTINFO
+        },
+        .pktinfo = { .ipi_spec_dst = dhcp_SOURCE_IP }
+    };
+    struct sockaddr_in destAddr = {
+        .sin_family = AF_INET,
+        .sin_port = hc_BSWAP16(67),
+        .sin_addr = { 255, 255, 255, 255 }
+    };
+    struct msghdr msghdr = {
+        .msg_name = &destAddr,
+        .msg_namelen = sizeof(destAddr),
+        .msg_iov = &(struct iovec) { .iov_base = payload, .iov_len = size },
+        .msg_iovlen = 1,
+        .msg_control = &cmsg,
+        .msg_controllen = sizeof(cmsg)
+    };
+    CHECK(sys_sendmsg(dhcpClient.fd, &msghdr, MSG_NOSIGNAL), RES == size);
 }
 
 static void dhcpClient_onTimer(void) {
@@ -63,6 +94,7 @@ static void dhcpClient_onTimer(void) {
             .opcode = dhcp_BOOTREQUEST,
             .hwAddrType = dhcp_ETHERNET,
             .hwAddrLen = 6,
+            .identifier = hc_BSWAP32(++dhcpClient.currentIdentifier),
             .flags = hc_BSWAP16(0x8000), // Request broadcast responses.
             .magicCookie = dhcp_MAGIC_COOKIE
         },
@@ -85,12 +117,7 @@ static void dhcpClient_onTimer(void) {
     };
     hc_MEMCPY(&discoverMsg.hdr.clientHwAddr, &dhcpClient.ifreq.ifr_addr[2], 6);
 
-    struct sockaddr_in destAddr = {
-        .sin_family = AF_INET,
-        .sin_port = hc_BSWAP16(67),
-        .sin_addr = { 255, 255, 255, 255 }
-    };
-    CHECK(sys_sendto(dhcpClient.fd, &discoverMsg, sizeof(discoverMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(discoverMsg));
+    dhcpClient_broadcastPacket(&discoverMsg, sizeof(discoverMsg));
 
     // Set timeout to 10 seconds.
     struct itimerspec timeout = { .it_value = { .tv_sec = 10 } };
@@ -168,6 +195,7 @@ static void dhcpClient_onMessage(void) {
                     .opcode = dhcp_BOOTREQUEST,
                     .hwAddrType = dhcp_ETHERNET,
                     .hwAddrLen = 6,
+                    .identifier = hc_BSWAP32(dhcpClient.currentIdentifier),
                     .flags = hc_BSWAP16(0x8000), // Request broadcast responses.
                     .magicCookie = dhcp_MAGIC_COOKIE
                 },
@@ -200,12 +228,7 @@ static void dhcpClient_onMessage(void) {
             hc_MEMCPY(&requestMsg.hdr.clientHwAddr, &dhcpClient.ifreq.ifr_addr[2], 6);
             hc_MEMCPY(&requestMsg.requestedIp, &header->yourIp, sizeof(requestMsg.requestedIp));
 
-            struct sockaddr_in destAddr = {
-                .sin_family = AF_INET,
-                .sin_port = hc_BSWAP16(67),
-                .sin_addr = { 255, 255, 255, 255 }
-            };
-            CHECK(sys_sendto(dhcpClient.fd, &requestMsg, sizeof(requestMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(requestMsg));
+            dhcpClient_broadcastPacket(&requestMsg, sizeof(requestMsg));
 
             // Set timeout to 10 seconds.
             struct itimerspec timeout = { .it_value = { .tv_sec = 10 } };
