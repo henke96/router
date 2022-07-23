@@ -1,6 +1,4 @@
 #define dhcp_IFINDEX 2
-// Can't be 0.0.0.0 unfortunately, or Linux replaces it.
-#define dhcp_SOURCE_IP { 10, 123, 0, 1 }
 
 struct dhcpClient {
     struct ifreq ifreq; // ifr_name and ifr_addr.
@@ -8,8 +6,8 @@ struct dhcpClient {
     int32_t timerFd;
     int32_t dnsIp; // 0 if none.
     uint32_t currentIdentifier;
-    uint8_t lastLeasedIp[4];
-    int32_t __pad;
+    uint32_t leasedIp; // Currently leased ip, 0 if none.
+    uint32_t renewServerIp; // The server to renew the lease from.
 };
 
 static struct dhcpClient dhcpClient = { 0 };
@@ -44,82 +42,87 @@ static void dhcpClient_init(void) {
     CHECK(sys_timerfd_settime(dhcpClient.timerFd, 0, &timeout, NULL), RES == 0);
 }
 
-static void dhcpClient_broadcastPacket(void *payload, int64_t size) {
-    struct {
-        struct cmsghdr cmsghdr;
-        struct in_pktinfo pktinfo;
-        int32_t __pad;
-    } cmsg = {
-        .cmsghdr = {
-            .cmsg_len = sizeof(cmsg.cmsghdr) + sizeof(cmsg.pktinfo),
-            .cmsg_level = IPPROTO_IP,
-            .cmsg_type = IP_PKTINFO
-        },
-        .pktinfo = { .ipi_spec_dst = dhcp_SOURCE_IP }
-    };
-    struct sockaddr_in destAddr = {
-        .sin_family = AF_INET,
-        .sin_port = hc_BSWAP16(67),
-        .sin_addr = { 255, 255, 255, 255 }
-    };
-    struct msghdr msghdr = {
-        .msg_name = &destAddr,
-        .msg_namelen = sizeof(destAddr),
-        .msg_iov = &(struct iovec) { .iov_base = payload, .iov_len = size },
-        .msg_iovlen = 1,
-        .msg_control = &cmsg,
-        .msg_controllen = sizeof(cmsg)
-    };
-    CHECK(sys_sendmsg(dhcpClient.fd, &msghdr, MSG_NOSIGNAL), RES == size);
-}
-
 static void dhcpClient_onTimer(void) {
     uint64_t expirations;
     CHECK(sys_read(dhcpClient.timerFd, &expirations, sizeof(expirations)), RES == sizeof(expirations));
     debug_ASSERT(expirations, RES == 1);
 
-    // We timed out. Restart DHCP process by sending a new discover.
-    struct discover {
+    struct {
         struct dhcp_header hdr;
         struct dhcp_option messageTypeOpt;
         uint8_t messageType;
         struct dhcp_option paramRequestListOpt;
         uint8_t paramRequestList[3];
-        struct dhcp_option leaseTimeOpt;
-        uint8_t leaseTime[4];
         uint8_t endOpt;
-        uint8_t __pad;
-    };
-
-    struct discover discoverMsg = {
+        uint8_t __pad[3];
+    } requestMsg = {
         .hdr = {
             .opcode = dhcp_BOOTREQUEST,
             .hwAddrType = dhcp_ETHERNET,
             .hwAddrLen = 6,
             .identifier = hc_BSWAP32(++dhcpClient.currentIdentifier),
-            .flags = hc_BSWAP16(0x8000), // Request broadcast responses.
             .magicCookie = dhcp_MAGIC_COOKIE
         },
         .messageTypeOpt = {
             .code = dhcp_MESSAGE_TYPE,
-            .length = sizeof(discoverMsg.messageType)
+            .length = sizeof(requestMsg.messageType)
         },
-        .messageType = dhcp_DISCOVER,
         .paramRequestListOpt = {
             .code = dhcp_PARAM_REQUEST_LIST,
-            .length = sizeof(discoverMsg.paramRequestList)
+            .length = sizeof(requestMsg.paramRequestList)
         },
         .paramRequestList = { dhcp_SUBNET_MASK, dhcp_ROUTER, dhcp_DNS },
-        .leaseTimeOpt = {
-            .code = dhcp_LEASE_TIME,
-            .length = sizeof(discoverMsg.leaseTime)
-        },
-        .leaseTime = { 0xff, 0xff, 0xff, 0xff }, // Infinity.
         .endOpt = dhcp_END
     };
-    hc_MEMCPY(&discoverMsg.hdr.clientHwAddr, &dhcpClient.ifreq.ifr_addr[2], 6);
+    hc_MEMCPY(&requestMsg.hdr.clientHwAddr, &dhcpClient.ifreq.ifr_addr[2], 6);
 
-    dhcpClient_broadcastPacket(&discoverMsg, sizeof(discoverMsg));
+    struct sockaddr_in destAddr = {
+        .sin_family = AF_INET,
+        .sin_port = hc_BSWAP16(67),
+        .sin_addr = { 255, 255, 255, 255 }
+    };
+
+    if (dhcpClient.leasedIp != 0 && dhcpClient.renewServerIp != 0) {
+        // Attempt to renew the leased IP once.
+        requestMsg.messageType = dhcp_REQUEST;
+        hc_MEMCPY(&requestMsg.hdr.clientIp[0], &dhcpClient.leasedIp, 4);
+        hc_MEMCPY(&destAddr.sin_addr[0], &dhcpClient.renewServerIp, 4);
+        dhcpClient.renewServerIp = 0;
+    } else {
+        // Either we had no leased IP, or we failed to renew it.
+        if (dhcpClient.leasedIp != 0) {
+            sys_write(STDOUT_FILENO, "Lost IP lease\n", 15);
+
+            // Remove the IP.
+            struct addrRequest {
+                struct nlmsghdr hdr;
+                struct ifaddrmsg addrMsg;
+                struct nlattr addrAttr;
+                uint8_t address[4];
+            };
+            struct addrRequest request = {
+                .hdr = {
+                    .nlmsg_len = sizeof(request),
+                    .nlmsg_type = RTM_DELADDR,
+                    .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
+                },
+                .addrMsg = {
+                    .ifa_family = AF_INET,
+                    .ifa_index = dhcp_IFINDEX
+                },
+                .addrAttr = {
+                    .nla_len = sizeof(request.addrAttr) + sizeof(request.address),
+                    .nla_type = IFA_LOCAL
+                }
+            };
+            hc_MEMCPY(&request.address, &dhcpClient.leasedIp, 4);
+            CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
+            dhcpClient.leasedIp = 0;
+        }
+        requestMsg.messageType = dhcp_DISCOVER;
+        requestMsg.hdr.flags = hc_BSWAP16(0x8000); // Request broadcast responses.
+    }
+    CHECK(sys_sendto(dhcpClient.fd, &requestMsg, sizeof(requestMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(requestMsg));
 
     // Set timeout to 10 seconds.
     struct itimerspec timeout = { .it_value = { .tv_sec = 10 } };
@@ -176,7 +179,7 @@ static void dhcpClient_onMessage(void) {
             if (leaseTime == NULL) return;
 
             // Respond to the offer with a request.
-            struct request {
+            struct {
                 struct dhcp_header hdr;
                 struct dhcp_option messageTypeOpt;
                 uint8_t messageType;
@@ -189,10 +192,8 @@ static void dhcpClient_onMessage(void) {
                 struct dhcp_option requestedIpOpt;
                 uint8_t requestedIp[4];
                 uint8_t endOpt;
-                uint8_t __pad[1];
-            };
-
-            struct request requestMsg = {
+                uint8_t __pad;
+            } requestMsg = {
                 .hdr = {
                     .opcode = dhcp_BOOTREQUEST,
                     .hwAddrType = dhcp_ETHERNET,
@@ -230,7 +231,12 @@ static void dhcpClient_onMessage(void) {
             hc_MEMCPY(&requestMsg.hdr.clientHwAddr, &dhcpClient.ifreq.ifr_addr[2], 6);
             hc_MEMCPY(&requestMsg.requestedIp, &header->yourIp, sizeof(requestMsg.requestedIp));
 
-            dhcpClient_broadcastPacket(&requestMsg, sizeof(requestMsg));
+            struct sockaddr_in destAddr = {
+                .sin_family = AF_INET,
+                .sin_port = hc_BSWAP16(67),
+                .sin_addr = { 255, 255, 255, 255 }
+            };
+            CHECK(sys_sendto(dhcpClient.fd, &requestMsg, sizeof(requestMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(requestMsg));
 
             // Set timeout to 10 seconds.
             struct itimerspec timeout = { .it_value = { .tv_sec = 10 } };
@@ -260,8 +266,11 @@ static void dhcpClient_onMessage(void) {
             uint32_t netmask;
             hc_MEMCPY(&netmask, &subnetMask->data[0], 4);
 
-            // Print any IP changes.
-            if (hc_MEMCMP(&dhcpClient.lastLeasedIp, &header->yourIp[0], 4) != 0) {
+            // Record new IP lease and renew-server.
+            hc_MEMCPY(&dhcpClient.renewServerIp, &header->serverIp, 4);
+            if (hc_MEMCMP(&dhcpClient.leasedIp, &header->yourIp[0], 4) != 0) {
+                hc_MEMCPY(&dhcpClient.leasedIp, &header->yourIp[0], 4);
+
                 char *octet1 = util_intToStr(&buffer[3], header->yourIp[0]);
                 char *octet2 = util_intToStr(&buffer[6], header->yourIp[1]);
                 char *octet3 = util_intToStr(&buffer[9], header->yourIp[2]);
@@ -277,7 +286,6 @@ static void dhcpClient_onMessage(void) {
                     { .iov_base = octet4, .iov_len = (int64_t)(&buffer[12] - octet4) },
                     { .iov_base = "\n", .iov_len = 1 }
                 }, 9);
-                hc_MEMCPY(&dhcpClient.lastLeasedIp, &header->yourIp[0], 4);
             }
 
             // Add the address.
@@ -287,8 +295,6 @@ static void dhcpClient_onMessage(void) {
                     struct ifaddrmsg addrMsg;
                     struct nlattr addrAttr;
                     uint8_t address[4];
-                    struct nlattr cacheInfoAttr;
-                    struct ifa_cacheinfo cacheInfo;
                 };
                 struct addrRequest request = {
                     .hdr = {
@@ -304,14 +310,6 @@ static void dhcpClient_onMessage(void) {
                     .addrAttr = {
                         .nla_len = sizeof(request.addrAttr) + sizeof(request.address),
                         .nla_type = IFA_LOCAL
-                    },
-                    .cacheInfoAttr = {
-                        .nla_len = sizeof(request.cacheInfoAttr) + sizeof(request.cacheInfo),
-                        .nla_type = IFA_CACHEINFO
-                    },
-                    .cacheInfo = {
-                        .ifa_prefered = leaseTimeValue,
-                        .ifa_valid = leaseTimeValue
                     }
                 };
                 hc_MEMCPY(&request.address, &header->yourIp[0], 4);
