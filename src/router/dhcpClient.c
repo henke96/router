@@ -13,7 +13,8 @@ struct dhcpClient {
 static struct dhcpClient dhcpClient = { 0 };
 
 static void dhcpClient_init(void) {
-    CHECK(dhcpClient.fd = sys_socket(AF_INET, SOCK_DGRAM, 0), RES > 0);
+    dhcpClient.fd = sys_socket(AF_INET, SOCK_DGRAM, 0);
+    CHECK(dhcpClient.fd, RES > 0);
 
     // Populate interface name and MAC address.
     dhcpClient.ifreq.ifr_ifindex = dhcp_IFINDEX;
@@ -116,13 +117,13 @@ static void dhcpClient_onTimer(void) {
                 }
             };
             hc_MEMCPY(&request.address, &dhcpClient.leasedIp, 4);
-            CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
+            netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
             dhcpClient.leasedIp = 0;
         }
         requestMsg.messageType = dhcp_DISCOVER;
         requestMsg.hdr.flags = hc_BSWAP16(0x8000); // Request broadcast responses.
     }
-    CHECK(sys_sendto(dhcpClient.fd, &requestMsg, sizeof(requestMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(requestMsg));
+    debug_CHECK(sys_sendto(dhcpClient.fd, &requestMsg, sizeof(requestMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(requestMsg));
 
     // Set timeout to 10 seconds.
     struct itimerspec timeout = { .it_value = { .tv_sec = 10 } };
@@ -236,7 +237,7 @@ static void dhcpClient_onMessage(void) {
                 .sin_port = hc_BSWAP16(67),
                 .sin_addr = { 255, 255, 255, 255 }
             };
-            CHECK(sys_sendto(dhcpClient.fd, &requestMsg, sizeof(requestMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(requestMsg));
+            debug_CHECK(sys_sendto(dhcpClient.fd, &requestMsg, sizeof(requestMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(requestMsg));
 
             // Set timeout to 10 seconds.
             struct itimerspec timeout = { .it_value = { .tv_sec = 10 } };
@@ -313,7 +314,7 @@ static void dhcpClient_onMessage(void) {
                     }
                 };
                 hc_MEMCPY(&request.address, &header->yourIp[0], 4);
-                CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
+                netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
             }
 
             // Set default route.
@@ -343,7 +344,7 @@ static void dhcpClient_onMessage(void) {
                     }
                 };
                 hc_MEMCPY(&request.gateway, &router->data[0], sizeof(request.gateway));
-                CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
+                netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
             }
         }
     }

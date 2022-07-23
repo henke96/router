@@ -34,7 +34,7 @@ static void acpi_init(void) {
         },
         .familyName = ACPI_EVENT_FAMILY_NAME
     };
-    CHECK(netlink_talk(acpi.netlinkFd, &request, sizeof(request)), RES == 0);
+    netlink_talk(acpi.netlinkFd, &request, sizeof(request));
 
     for (
         struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;

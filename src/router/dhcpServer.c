@@ -177,7 +177,7 @@ static void dhcpServer_onMessage(struct dhcpServer *self) {
     // Unicast if the client says it already has the IP.
     if (hc_MEMCMP(&header->clientIp[0], &replyMsg.hdr.yourIp[0], 4) == 0) hc_MEMCPY(&destAddr.sin_addr[0], &replyMsg.hdr.yourIp[0], 4);
 
-    CHECK(sys_sendto(self->fd, &replyMsg, sizeof(replyMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(replyMsg));
+    debug_CHECK(sys_sendto(self->fd, &replyMsg, sizeof(replyMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(replyMsg));
 }
 
 static void dhcpServer_deinit(struct dhcpServer *self) {

@@ -7,7 +7,7 @@
 #include "hc/linux/debug.c"
 #include "hc/linux/helpers/_start.c"
 
-static char buffer[4096];
+static char buffer[4096] hc_ALIGNED(8);
 
 static int32_t initialise(void) {
     if (sys_mount("", "/proc", "proc", 0, NULL) < 0) return -1;

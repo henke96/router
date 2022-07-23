@@ -46,7 +46,7 @@ static void config_init(void) {
         },
         .familyName = WG_GENL_NAME
     };
-    CHECK(netlink_talk(config.genetlinkFd, &request, sizeof(request)), RES == 0);
+    netlink_talk(config.genetlinkFd, &request, sizeof(request));
 
     // Iterate over all attributes, assume CTRL_ATTR_FAMILY_ID is one of them.
     for (
@@ -84,7 +84,7 @@ static void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen)
         }
     };
     hc_MEMCPY(&request.address, address, sizeof(request.address));
-    CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
+    netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
 }
 
 static void config_bringUp(uint8_t ifIndex) {
@@ -106,7 +106,7 @@ static void config_bringUp(uint8_t ifIndex) {
             .ifi_change = 0xFFFFFFFF
         }
     };
-    CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
+    netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
 }
 
 static void config_addWgPeer1Route(void) {
@@ -146,7 +146,7 @@ static void config_addWgPeer1Route(void) {
         },
         .outIfIndex = config_WG_IF_INDEX
     };
-    CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
+    netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
 }
 
 static void config_addWireguardIf(void) {
@@ -189,7 +189,7 @@ static void config_addWireguardIf(void) {
         },
         .infoKind = WG_GENL_NAME
     };
-    CHECK(netlink_talk(config.rtnetlinkFd, &request, sizeof(request)), RES == 0);
+    netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
 }
 
 static void config_setWgDevice(void) {
@@ -291,7 +291,7 @@ static void config_setWgDevice(void) {
         CHECK(sys_write(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
     }
     debug_CHECK(sys_close(fd), RES == 0);
-    CHECK(netlink_talk(config.genetlinkFd, &request, sizeof(request)), RES == 0);
+    netlink_talk(config.genetlinkFd, &request, sizeof(request));
 }
 
 static void config_printWgPublicKey(void) {
@@ -318,7 +318,7 @@ static void config_printWgPublicKey(void) {
         },
         .ifIndex = config_WG_IF_INDEX
     };
-    CHECK(netlink_talk(config.genetlinkFd, &request, sizeof(request)), RES == 0);
+    netlink_talk(config.genetlinkFd, &request, sizeof(request));
 
     // Iterate over all attributes, assume WGDEVICE_A_PUBLIC_KEY is one of them.
     for (
