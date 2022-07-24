@@ -10,7 +10,8 @@
 #define CHECK(EXPR, COND) do { typeof(EXPR) RES = (EXPR); if (!(COND)) debug_fail((int64_t)RES, #EXPR, __FILE_NAME__, __LINE__); } while (0)
 
 // Shared buffer space for whole program.
-static char buffer[8192] hc_ALIGNED(8); // See NLMSG_GOODSIZE in <linux/netlink.h>
+static char buffer[66000] hc_ALIGNED(8); // Netlink wants 8192, see NLMSG_GOODSIZE in <linux/netlink.h>.
+                                         // packetDumper wants to support jumbo frames, so use 66000 to be (very) safe.
 
 #include "dhcp.h"
 #include "netlink.c"
