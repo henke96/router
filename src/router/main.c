@@ -13,6 +13,10 @@
 static char buffer[66000] hc_ALIGNED(8); // Netlink wants 8192, see NLMSG_GOODSIZE in <linux/netlink.h>.
                                          // packetDumper wants to support jumbo frames, so use 66000 to be (very) safe.
 
+static void epollAdd(int32_t epollFd, int32_t fd) {
+    CHECK(sys_epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &(struct epoll_event) { .events = EPOLLIN, .data.fd = fd }), RES == 0);
+}
+
 #include "dhcp.h"
 #include "netlink.c"
 #include "acpi.c"
@@ -34,42 +38,33 @@ int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     uint8_t lanIp[4] hc_ALIGNED(4) = { 10, 123, 0, 1 };
     dhcpServer_init(&dhcpServer, 3, *(uint32_t *)&lanIp[0]);
 
+    struct packetDumper wanDumper;
+    packetDumper_init(&wanDumper, 2);
+
     // Setup epoll.
     int32_t epollFd = sys_epoll_create1(0);
     CHECK(epollFd, RES > 0);
-    CHECK(sys_epoll_ctl(epollFd, EPOLL_CTL_ADD, acpi.netlinkFd, &(struct epoll_event) { .events = EPOLLIN, .data.fd = acpi.netlinkFd }), RES == 0);
-    CHECK(sys_epoll_ctl(epollFd, EPOLL_CTL_ADD, dhcpClient.fd, &(struct epoll_event) { .events = EPOLLIN, .data.fd = dhcpClient.fd }), RES == 0);
-    CHECK(sys_epoll_ctl(epollFd, EPOLL_CTL_ADD, dhcpClient.timerFd, &(struct epoll_event) { .events = EPOLLIN, .data.fd = dhcpClient.timerFd }), RES == 0);
-    CHECK(sys_epoll_ctl(epollFd, EPOLL_CTL_ADD, dhcpServer.fd, &(struct epoll_event) { .events = EPOLLIN, .data.fd = dhcpServer.fd }), RES == 0);
-    CHECK(sys_epoll_ctl(epollFd, EPOLL_CTL_ADD, STDIN_FILENO, &(struct epoll_event) { .events = EPOLLIN, .data.fd = STDIN_FILENO }), RES == 0);
+    epollAdd(epollFd, acpi.netlinkFd);
+    epollAdd(epollFd, dhcpClient.fd);
+    epollAdd(epollFd, dhcpClient.timerFd);
+    epollAdd(epollFd, dhcpServer.fd);
+    epollAdd(epollFd, wanDumper.listenFd);
 
-    bool isDumping = false;
-    struct packetDumper wanDumper;
     for (;;) {
         struct epoll_event event;
         CHECK(sys_epoll_pwait(epollFd, &event, 1, -1, NULL), RES == 1);
         if (event.data.fd == acpi.netlinkFd) break;
 
-        if (event.data.fd == STDIN_FILENO) {
-            debug_CHECK(sys_read(STDIN_FILENO, &buffer[0], sizeof(buffer)), RES > 0);
-            if (isDumping) {
-                packetDumper_deinit(&wanDumper);
-                sys_write(STDOUT_FILENO, "stop dumping\n", 13);
-            } else {
-                uint8_t dumpDestIp[4] hc_ALIGNED(4) = { 10, 123, 0, 255 };
-                packetDumper_init(&wanDumper, 2, *(uint32_t *)&dumpDestIp[0]);
-                CHECK(sys_epoll_ctl(epollFd, EPOLL_CTL_ADD, wanDumper.packetFd, &(struct epoll_event) { .events = EPOLLIN, .data.fd = wanDumper.packetFd }), RES == 0);
-                sys_write(STDOUT_FILENO, "start dumping\n", 14);
-            }
-            isDumping = !isDumping;
-        } else if (event.data.fd == dhcpClient.fd) dhcpClient_onMessage();
+        if (event.data.fd == dhcpClient.fd) dhcpClient_onMessage();
         else if (event.data.fd == dhcpClient.timerFd) dhcpClient_onTimer();
         else if (event.data.fd == dhcpServer.fd) dhcpServer_onMessage(&dhcpServer);
-        else if (event.data.fd == wanDumper.packetFd) packetDumper_onMessage(&wanDumper);
+        else if (event.data.fd == wanDumper.listenFd) packetDumper_onListenFd(&wanDumper, epollFd);
+        else if (event.data.fd == wanDumper.packetFd) packetDumper_onPacketFd(&wanDumper);
+        else if (event.data.fd == wanDumper.clientFd) packetDumper_onClientFd(&wanDumper);
         else hc_UNREACHABLE;
     }
 
-    if (isDumping) packetDumper_deinit(&wanDumper);
+    packetDumper_deinit(&wanDumper);
     dhcpServer_deinit(&dhcpServer);
     dhcpClient_deinit();
     config_deinit();
