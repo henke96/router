@@ -11,7 +11,7 @@ dev="$(losetup --show -P -f disk.img)"
 trap cleanup EXIT
 
 mkdir -p mnt/
-mount ${dev}p1 mnt/
+mount ${dev} mnt/
 
 echo "Disk device is: $dev"
 echo "Entering shell, use Ctrl-D when done."

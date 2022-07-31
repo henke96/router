@@ -33,7 +33,7 @@ static void packetDumper_stop(struct packetDumper *self) {
 
 static void packetDumper_onListenFd(struct packetDumper *self, int32_t epollFd) {
     int32_t newClientFd = sys_accept4(self->listenFd, NULL, NULL, 0);
-    debug_ASSERT(newClientFd, RES > 0);
+    debug_ASSERT(newClientFd > 0);
     if (newClientFd < 0) return;
 
     packetDumper_stop(self); // Stop any ongoing dump.
@@ -92,8 +92,8 @@ static void packetDumper_onPacketFd(struct packetDumper *self) {
 
     int64_t read = sys_recvmsg(self->packetFd, &recvMsghdr, 0);
     CHECK(read, RES > 0);
-    debug_ASSERT(cmsg.cmsghdr.cmsg_type, RES = SO_TIMESTAMPING);
-    debug_ASSERT(cmsg.cmsghdr.cmsg_len, RES = sizeof(cmsg));
+    debug_ASSERT(cmsg.cmsghdr.cmsg_type == SO_TIMESTAMPING);
+    debug_ASSERT(cmsg.cmsghdr.cmsg_len == sizeof(cmsg));
 
     struct {
         uint32_t timestampSec;

@@ -1,4 +1,5 @@
 /mnt
+/initramfs
 *.bin*
 *.efi*
 *.img

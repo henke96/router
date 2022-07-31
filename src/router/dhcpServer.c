@@ -78,7 +78,7 @@ static void dhcpServer_init(struct dhcpServer *self, int32_t ifIndex, uint32_t s
 
 static void dhcpServer_onMessage(struct dhcpServer *self) {
     int64_t read = sys_read(self->fd, &buffer[0], sizeof(buffer));
-    debug_ASSERT(read, RES > 0);
+    debug_ASSERT(read > 0);
     if (read < (int64_t)sizeof(struct dhcp_header)) return;
     void *end = &buffer[read];
     struct dhcp_header *header = (void *)&buffer[0];

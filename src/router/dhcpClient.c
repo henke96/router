@@ -46,7 +46,7 @@ static void dhcpClient_init(void) {
 static void dhcpClient_onTimer(void) {
     uint64_t expirations;
     CHECK(sys_read(dhcpClient.timerFd, &expirations, sizeof(expirations)), RES == sizeof(expirations));
-    debug_ASSERT(expirations, RES == 1);
+    debug_ASSERT(expirations == 1);
 
     struct {
         struct dhcp_header hdr;
@@ -132,7 +132,7 @@ static void dhcpClient_onTimer(void) {
 
 static void dhcpClient_onMessage(void) {
     int64_t read = sys_read(dhcpClient.fd, &buffer[0], sizeof(buffer));
-    debug_ASSERT(read, RES > 0);
+    debug_ASSERT(read > 0);
     if (read < (int64_t)sizeof(struct dhcp_header)) return;
     void *end = &buffer[read];
     struct dhcp_header *header = (void *)&buffer[0];

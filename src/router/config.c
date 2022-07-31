@@ -278,18 +278,10 @@ static void config_setWgDevice(void) {
         },
         .peer1AllowedIpNetmask = 32
     };
-    // Read private key from /wgkey, or generate it if file doesn't exist.
-    int32_t fd = sys_openat(-1, "/wgkey", O_RDONLY, 0);
-    CHECK(fd, RES > 0 || RES == -ENOENT);
-    if (fd > 0) {
-        CHECK(sys_read(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
-    } else {
-        // Generate key and write to file.
-        CHECK(sys_getrandom(&request.privateKey, sizeof(request.privateKey), 0), RES == sizeof(request.privateKey));
-        fd = sys_openat(-1, "/wgkey", O_WRONLY | O_CREAT | O_EXCL, S_IRUSR);
-        CHECK(fd, RES > 0);
-        CHECK(sys_write(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
-    }
+    // Read private key from /wgkey.
+    int32_t fd = sys_openat(-1, "/mnt/wgkey", O_RDONLY, 0);
+    CHECK(fd, RES > 0);
+    CHECK(sys_read(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
     debug_CHECK(sys_close(fd), RES == 0);
     netlink_talk(config.genetlinkFd, &request, sizeof(request));
 }
