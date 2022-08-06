@@ -12,7 +12,7 @@ struct dhcpClient {
 
 static struct dhcpClient dhcpClient = { 0 };
 
-static void dhcpClient_init(void) {
+static hc_COLD void dhcpClient_init(void) {
     dhcpClient.fd = sys_socket(AF_INET, SOCK_DGRAM, 0);
     CHECK(dhcpClient.fd, RES > 0);
 
@@ -350,7 +350,7 @@ static void dhcpClient_onMessage(void) {
     }
 }
 
-static void dhcpClient_deinit(void) {
+static hc_COLD void dhcpClient_deinit(void) {
     debug_CHECK(sys_close(dhcpClient.timerFd), RES == 0);
     debug_CHECK(sys_close(dhcpClient.fd), RES == 0);
 }

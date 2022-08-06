@@ -48,7 +48,7 @@ static int32_t dhcpServer_getEntry(struct dhcpServer *self, uint8_t *macAddr, bo
     return oldestIndex;
 }
 
-static void dhcpServer_init(struct dhcpServer *self, int32_t ifIndex, uint32_t serverIp) {
+static hc_COLD void dhcpServer_init(struct dhcpServer *self, int32_t ifIndex, uint32_t serverIp) {
     self->ifIndex = ifIndex;
     self->serverIp = serverIp;
     for (int32_t i = 0; i < dhcpServer_NUM_ENTRIES; ++i) self->entries[i].timeSec = 0;
@@ -180,6 +180,6 @@ static void dhcpServer_onMessage(struct dhcpServer *self) {
     debug_CHECK(sys_sendto(self->fd, &replyMsg, sizeof(replyMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(replyMsg));
 }
 
-static void dhcpServer_deinit(struct dhcpServer *self) {
+static hc_COLD void dhcpServer_deinit(struct dhcpServer *self) {
     debug_CHECK(sys_close(self->fd), RES == 0);
 }

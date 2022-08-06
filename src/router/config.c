@@ -16,7 +16,7 @@ struct config {
 
 static struct config config;
 
-static void config_init(void) {
+static hc_COLD void config_init(void) {
     config.rtnetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
     CHECK(config.rtnetlinkFd, RES > 0);
     config.genetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC);
@@ -60,7 +60,7 @@ static void config_init(void) {
     }
 }
 
-static void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen) {
+static hc_COLD void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen) {
     struct addrRequest {
         struct nlmsghdr hdr;
         struct ifaddrmsg addrMsg;
@@ -87,7 +87,7 @@ static void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen)
     netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
 }
 
-static void config_bringUp(uint8_t ifIndex) {
+static hc_COLD void config_bringUp(uint8_t ifIndex) {
     struct linkRequest {
         struct nlmsghdr hdr;
         struct ifinfomsg ifInfo;
@@ -109,7 +109,7 @@ static void config_bringUp(uint8_t ifIndex) {
     netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
 }
 
-static void config_addWgPeer1Route(void) {
+static hc_COLD void config_addWgPeer1Route(void) {
     struct addRouteRequest {
         struct nlmsghdr hdr;
         struct rtmsg rtmsg;
@@ -149,7 +149,7 @@ static void config_addWgPeer1Route(void) {
     netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
 }
 
-static void config_addWireguardIf(void) {
+static hc_COLD void config_addWireguardIf(void) {
     struct linkRequest {
         struct nlmsghdr hdr;
         struct ifinfomsg ifInfo;
@@ -192,7 +192,7 @@ static void config_addWireguardIf(void) {
     netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
 }
 
-static void config_setWgDevice(void) {
+static hc_COLD void config_setWgDevice(void) {
     struct setDeviceRequest {
         struct nlmsghdr hdr;
         struct genlmsghdr genHdr;
@@ -201,7 +201,8 @@ static void config_setWgDevice(void) {
         struct nlattr privateKeyAttr;
         uint8_t privateKey[32];
         struct nlattr listenPortAttr;
-        uint32_t listenPort; // uint16_t
+        uint16_t listenPort;
+        char __pad[2];
         struct nlattr peersAttr;
         // Peer1
         struct nlattr peer1Attr;
@@ -210,11 +211,13 @@ static void config_setWgDevice(void) {
         struct nlattr peer1AllowedIpsAttr;
         struct nlattr peer1AllowedIpAttr;
         struct nlattr peer1AllowedIpFamilyAttr;
-        uint32_t peer1AllowedIpFamily; // uint16_t
+        uint16_t peer1AllowedIpFamily;
+        char __pad2[2];
         struct nlattr peer1AllowedIpAddressAttr;
         uint8_t peer1AllowedIpAddress[4];
         struct nlattr peer1AllowedIpNetmaskAttr;
-        uint32_t peer1AllowedIpNetmask; // uint8_t
+        uint8_t peer1AllowedIpNetmask;
+        char __pad3[3];
         uint32_t peer1End[]; // For use with offsetof()
     };
     struct setDeviceRequest request = {
@@ -237,7 +240,7 @@ static void config_setWgDevice(void) {
             .nla_type = WGDEVICE_A_PRIVATE_KEY
         },
         .listenPortAttr = {
-            .nla_len = sizeof(request.listenPortAttr) + sizeof(uint16_t),
+            .nla_len = sizeof(request.listenPortAttr) + sizeof(request.listenPort),
             .nla_type = WGDEVICE_A_LISTEN_PORT
         },
         .listenPort = config_WG_LISTEN_PORT,
@@ -263,7 +266,7 @@ static void config_setWgDevice(void) {
             .nla_type = NLA_F_NESTED
         },
         .peer1AllowedIpFamilyAttr = {
-            .nla_len = sizeof(request.peer1AllowedIpFamilyAttr) + sizeof(uint16_t),
+            .nla_len = sizeof(request.peer1AllowedIpFamilyAttr) + sizeof(request.peer1AllowedIpFamily),
             .nla_type = WGALLOWEDIP_A_FAMILY
         },
         .peer1AllowedIpFamily = AF_INET,
@@ -273,7 +276,7 @@ static void config_setWgDevice(void) {
         },
         .peer1AllowedIpAddress = config_WG_PEER1_ADDRESS,
         .peer1AllowedIpNetmaskAttr = {
-            .nla_len = sizeof(request.peer1AllowedIpNetmaskAttr) + sizeof(uint8_t),
+            .nla_len = sizeof(request.peer1AllowedIpNetmaskAttr) + sizeof(request.peer1AllowedIpNetmask),
             .nla_type = WGALLOWEDIP_A_CIDR_MASK
         },
         .peer1AllowedIpNetmask = 32
@@ -286,7 +289,7 @@ static void config_setWgDevice(void) {
     netlink_talk(config.genetlinkFd, &request, sizeof(request));
 }
 
-static void config_printWgPublicKey(void) {
+static hc_COLD void config_printWgPublicKey(void) {
     struct getDeviceRequest {
         struct nlmsghdr hdr;
         struct genlmsghdr genHdr;
@@ -333,7 +336,13 @@ static void config_printWgPublicKey(void) {
     CHECK(written, RES == 14 + sizeof(base64PublicKey) + 1);
 }
 
-static void config_configure(void) {
+static hc_COLD void config_configure(void) {
+    // Don't respond to ARP on the wrong interface.
+    int32_t fd = sys_openat(-1, "/proc/sys/net/ipv4/conf/all/arp_ignore", O_WRONLY, 0);
+    CHECK(fd, RES > 0);
+    CHECK(sys_write(fd, "1", 1), RES == 1);
+    debug_CHECK(sys_close(fd), RES == 0);
+
     // eth0
     config_bringUp(2);
 
@@ -349,13 +358,13 @@ static void config_configure(void) {
     config_addWgPeer1Route();
 
     // Enable routing.
-    int32_t fd = sys_openat(-1, "/proc/sys/net/ipv4/ip_forward", O_WRONLY, 0);
+    fd = sys_openat(-1, "/proc/sys/net/ipv4/ip_forward", O_WRONLY, 0);
     CHECK(fd, RES > 0);
     CHECK(sys_write(fd, "1", 1), RES == 1);
     debug_CHECK(sys_close(fd), RES == 0);
 }
 
-static void config_deinit(void) {
+static hc_COLD void config_deinit(void) {
     debug_CHECK(sys_close(config.rtnetlinkFd), RES == 0);
     debug_CHECK(sys_close(config.genetlinkFd), RES == 0);
 }

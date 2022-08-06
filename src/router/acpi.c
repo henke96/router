@@ -6,7 +6,7 @@ struct acpi {
 
 static struct acpi acpi;
 
-static void acpi_init(void) {
+static hc_COLD void acpi_init(void) {
     acpi.netlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC);
     CHECK(acpi.netlinkFd, RES > 0);
 
@@ -63,6 +63,6 @@ static void acpi_init(void) {
     CHECK(sys_bind(acpi.netlinkFd, &addr, sizeof(addr)), RES == 0);
 }
 
-static void acpi_deinit(void) {
+static hc_COLD void acpi_deinit(void) {
     debug_CHECK(sys_close(acpi.netlinkFd), RES == 0);
 }

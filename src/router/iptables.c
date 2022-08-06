@@ -1,5 +1,5 @@
 
-static void iptables_configure(void) {
+static hc_COLD void iptables_configure(void) {
     int32_t fd = sys_socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     CHECK(fd, RES > 0);
 
