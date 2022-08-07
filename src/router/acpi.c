@@ -34,7 +34,7 @@ static hc_COLD void acpi_init(void) {
         },
         .familyName = ACPI_EVENT_FAMILY_NAME
     };
-    netlink_talk(acpi.netlinkFd, &request, sizeof(request));
+    netlink_talk(acpi.netlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 
     for (
         struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;

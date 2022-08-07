@@ -117,7 +117,7 @@ static void dhcpClient_onTimer(void) {
                 }
             };
             hc_MEMCPY(&request.address, &dhcpClient.leasedIp, 4);
-            netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+            netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
             dhcpClient.leasedIp = 0;
         }
         requestMsg.messageType = dhcp_DISCOVER;
@@ -314,7 +314,7 @@ static void dhcpClient_onMessage(void) {
                     }
                 };
                 hc_MEMCPY(&request.address, &header->yourIp[0], 4);
-                netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+                netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
             }
 
             // Set default route.
@@ -344,7 +344,7 @@ static void dhcpClient_onMessage(void) {
                     }
                 };
                 hc_MEMCPY(&request.gateway, &router->data[0], sizeof(request.gateway));
-                netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+                netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
             }
         }
     }

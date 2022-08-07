@@ -1,3 +1,5 @@
+#define config_IFTYPE_WIREGUARD "wireguard\0\0"
+
 #define config_WG_IF_NAME "wg0"
 #define config_WG_IF_INDEX 123
 // Try to use a port that is unlikely to be blocked by firewalls.
@@ -46,7 +48,7 @@ static hc_COLD void config_init(void) {
         },
         .familyName = WG_GENL_NAME
     };
-    netlink_talk(config.genetlinkFd, &request, sizeof(request));
+    netlink_talk(config.genetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 
     // Iterate over all attributes, assume CTRL_ATTR_FAMILY_ID is one of them.
     for (
@@ -84,7 +86,7 @@ static hc_COLD void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t pr
         }
     };
     hc_MEMCPY(&request.address, address, sizeof(request.address));
-    netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+    netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 }
 
 static hc_COLD void config_bringUp(uint8_t ifIndex) {
@@ -106,7 +108,7 @@ static hc_COLD void config_bringUp(uint8_t ifIndex) {
             .ifi_change = 0xFFFFFFFF
         }
     };
-    netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+    netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 }
 
 static hc_COLD void config_addWgPeer1Route(void) {
@@ -146,50 +148,57 @@ static hc_COLD void config_addWgPeer1Route(void) {
         },
         .outIfIndex = config_WG_IF_INDEX
     };
-    netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+    netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 }
 
-static hc_COLD void config_addWireguardIf(void) {
-    struct linkRequest {
+// Name/type sizes must be multiples of 4 (pad strings with zeroes).
+static hc_COLD void config_addIf(int32_t ifIndex, char *ifName, uint32_t ifNameSize, char *ifType, uint32_t ifTypeSize) {
+    debug_ASSERT((ifNameSize & 3) == 0 && (ifTypeSize & 3) == 0);
+    struct baseRequest {
         struct nlmsghdr hdr;
         struct ifinfomsg ifInfo;
         struct nlattr ifNameAttr;
-        char ifName[sizeof(config_WG_IF_NAME)];
-        char ifNamePad[util_PAD_BYTES(sizeof(config_WG_IF_NAME), 4)];
+    };
+    struct linkInfoHdr {
         struct nlattr linkInfoAttr;
         struct nlattr linkInfoKindAttr;
-        char infoKind[sizeof(WG_GENL_NAME)];
-        char infoKindPad[util_PAD_BYTES(sizeof(WG_GENL_NAME), 4)];
     };
-    struct linkRequest request = {
+
+    struct linkInfoHdr linkInfoHdr = {
+        .linkInfoAttr = {
+            .nla_len = (uint16_t)(sizeof(linkInfoHdr.linkInfoAttr) + sizeof(linkInfoHdr.linkInfoKindAttr) + ifTypeSize),
+            .nla_type = IFLA_LINKINFO | NLA_F_NESTED
+        },
+        .linkInfoKindAttr = {
+            .nla_len = (uint16_t)(sizeof(linkInfoHdr.linkInfoKindAttr) + ifTypeSize),
+            .nla_type = IFLA_INFO_KIND
+        }
+    };
+    struct baseRequest baseRequest = {
         .hdr = {
-            .nlmsg_len = sizeof(request),
+            .nlmsg_len = sizeof(baseRequest) + ifNameSize + sizeof(linkInfoHdr) + ifTypeSize,
             .nlmsg_type = RTM_NEWLINK,
             .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE,
         },
         .ifInfo = {
             .ifi_family = AF_UNSPEC,
             .ifi_type = 0,
-            .ifi_index = config_WG_IF_INDEX,
+            .ifi_index = ifIndex,
             .ifi_flags = IFF_UP,
             .ifi_change = 0xFFFFFFFF
         },
         .ifNameAttr = {
-            .nla_len = sizeof(request.ifNameAttr) + sizeof(request.ifName),
+            .nla_len = (uint16_t)(sizeof(baseRequest.ifNameAttr) + ifNameSize),
             .nla_type = IFLA_IFNAME
-        },
-        .ifName = config_WG_IF_NAME,
-        .linkInfoAttr = {
-            .nla_len = sizeof(request.linkInfoAttr) + sizeof(request.linkInfoKindAttr) + sizeof(request.infoKind) + sizeof(request.infoKindPad),
-            .nla_type = IFLA_LINKINFO | NLA_F_NESTED
-        },
-        .linkInfoKindAttr = {
-            .nla_len = sizeof(request.linkInfoKindAttr) + sizeof(request.infoKind),
-            .nla_type = IFLA_INFO_KIND
-        },
-        .infoKind = WG_GENL_NAME
+        }
     };
-    netlink_talk(config.rtnetlinkFd, &request, sizeof(request));
+    struct iovec iov[4] = {
+        { .iov_base = &baseRequest, .iov_len = sizeof(baseRequest) },
+        { .iov_base = &ifName[0],   .iov_len = ifNameSize },
+        { .iov_base = &linkInfoHdr, .iov_len = sizeof(linkInfoHdr) },
+        { .iov_base = &ifType[0],   .iov_len = ifTypeSize }
+    };
+    netlink_talk(config.rtnetlinkFd, &iov[0], 4);
 }
 
 static hc_COLD void config_setWgDevice(void) {
@@ -286,7 +295,7 @@ static hc_COLD void config_setWgDevice(void) {
     CHECK(fd, RES > 0);
     CHECK(sys_read(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
     debug_CHECK(sys_close(fd), RES == 0);
-    netlink_talk(config.genetlinkFd, &request, sizeof(request));
+    netlink_talk(config.genetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 }
 
 static hc_COLD void config_printWgPublicKey(void) {
@@ -313,7 +322,7 @@ static hc_COLD void config_printWgPublicKey(void) {
         },
         .ifIndex = config_WG_IF_INDEX
     };
-    netlink_talk(config.genetlinkFd, &request, sizeof(request));
+    netlink_talk(config.genetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 
     // Iterate over all attributes, assume WGDEVICE_A_PUBLIC_KEY is one of them.
     for (
@@ -352,7 +361,7 @@ static hc_COLD void config_configure(void) {
     config_bringUp(3);
 
     // wg0
-    config_addWireguardIf();
+    config_addIf(config_WG_IF_INDEX, config_WG_IF_NAME, sizeof(config_WG_IF_NAME), config_IFTYPE_WIREGUARD, sizeof(config_IFTYPE_WIREGUARD));
     config_setWgDevice();
     config_printWgPublicKey();
     config_addWgPeer1Route();
