@@ -1,4 +1,4 @@
-#define dhcp_IFINDEX 2
+#define dhcp_IFINDEX config_WAN_IF_INDEX
 
 struct dhcpClient {
     struct ifreq ifreq; // ifr_name and ifr_addr.

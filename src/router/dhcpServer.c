@@ -1,4 +1,4 @@
-#define dhcpServer_FIRST_OCTET 10
+#define dhcpServer_FIRST_OCTET 40
 #define dhcpServer_NUM_ENTRIES (255 - dhcpServer_FIRST_OCTET)
 static_assert(dhcpServer_FIRST_OCTET > 1 && dhcpServer_NUM_ENTRIES > 0, "");
 

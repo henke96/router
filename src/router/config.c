@@ -1,4 +1,8 @@
 #define config_IFTYPE_WIREGUARD "wireguard\0\0"
+#define config_IFTYPE_BRIDGE "bridge\0"
+
+#define config_WAN_IF_NAME "wan"
+#define config_WAN_IF_INDEX 100
 
 #define config_WG_IF_NAME "wg0"
 #define config_WG_IF_INDEX 123
@@ -89,7 +93,7 @@ static hc_COLD void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t pr
     netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 }
 
-static hc_COLD void config_bringUp(uint8_t ifIndex) {
+static hc_COLD void config_setFlags(int32_t ifIndex, uint32_t flags, uint32_t flagsMask) {
     struct linkRequest {
         struct nlmsghdr hdr;
         struct ifinfomsg ifInfo;
@@ -104,9 +108,38 @@ static hc_COLD void config_bringUp(uint8_t ifIndex) {
             .ifi_family = AF_UNSPEC,
             .ifi_type = 0,
             .ifi_index = ifIndex,
-            .ifi_flags = IFF_UP,
-            .ifi_change = 0xFFFFFFFF
+            .ifi_flags = flags,
+            .ifi_change = flagsMask
         }
+    };
+    netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+}
+
+static hc_COLD void config_setMaster(int32_t ifIndex, int32_t masterIfIndex, uint32_t flags, uint32_t flagsMask) {
+    struct linkRequest {
+        struct nlmsghdr hdr;
+        struct ifinfomsg ifInfo;
+        struct nlattr masterAttr;
+        int32_t master;
+    };
+    struct linkRequest request = {
+        .hdr = {
+            .nlmsg_len = sizeof(request),
+            .nlmsg_type = RTM_NEWLINK,
+            .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
+        },
+        .ifInfo = {
+            .ifi_family = AF_UNSPEC,
+            .ifi_type = 0,
+            .ifi_index = ifIndex,
+            .ifi_flags = flags,
+            .ifi_change = flagsMask
+        },
+        .masterAttr = {
+            .nla_len = sizeof(request.masterAttr) + sizeof(request.master),
+            .nla_type = IFLA_MASTER
+        },
+        .master = masterIfIndex
     };
     netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 }
@@ -152,7 +185,7 @@ static hc_COLD void config_addWgPeer1Route(void) {
 }
 
 // Name/type sizes must be multiples of 4 (pad strings with zeroes).
-static hc_COLD void config_addIf(int32_t ifIndex, char *ifName, uint32_t ifNameSize, char *ifType, uint32_t ifTypeSize) {
+static hc_COLD void config_addIf(int32_t ifIndex, char *ifName, uint32_t ifNameSize, char *ifType, uint32_t ifTypeSize, uint32_t flags, uint32_t flagsMask) {
     debug_ASSERT((ifNameSize & 3) == 0 && (ifTypeSize & 3) == 0);
     struct baseRequest {
         struct nlmsghdr hdr;
@@ -184,8 +217,8 @@ static hc_COLD void config_addIf(int32_t ifIndex, char *ifName, uint32_t ifNameS
             .ifi_family = AF_UNSPEC,
             .ifi_type = 0,
             .ifi_index = ifIndex,
-            .ifi_flags = IFF_UP,
-            .ifi_change = 0xFFFFFFFF
+            .ifi_flags = flags,
+            .ifi_change = flagsMask
         },
         .ifNameAttr = {
             .nla_len = (uint16_t)(sizeof(baseRequest.ifNameAttr) + ifNameSize),
@@ -352,16 +385,30 @@ static hc_COLD void config_configure(void) {
     CHECK(sys_write(fd, "1", 1), RES == 1);
     debug_CHECK(sys_close(fd), RES == 0);
 
+    // wan
+    config_addIf(
+        config_WAN_IF_INDEX,
+        config_WAN_IF_NAME, sizeof(config_WAN_IF_NAME),
+        config_IFTYPE_BRIDGE, sizeof(config_IFTYPE_BRIDGE),
+        IFF_UP, IFF_UP
+    );
     // eth0
-    config_bringUp(2);
-
+    config_setMaster(2, config_WAN_IF_INDEX, IFF_UP, IFF_UP);
     // eth1
+    config_setMaster(3, config_WAN_IF_INDEX, IFF_UP, IFF_UP);
+
+    // eth2
     uint8_t if3Address[] = { 10, 123, 0, 1 };
-    config_addIpv4(3, &if3Address[0], 24);
-    config_bringUp(3);
+    config_addIpv4(4, &if3Address[0], 24);
+    config_setFlags(4, IFF_UP, IFF_UP);
 
     // wg0
-    config_addIf(config_WG_IF_INDEX, config_WG_IF_NAME, sizeof(config_WG_IF_NAME), config_IFTYPE_WIREGUARD, sizeof(config_IFTYPE_WIREGUARD));
+    config_addIf(
+        config_WG_IF_INDEX,
+        config_WG_IF_NAME, sizeof(config_WG_IF_NAME),
+        config_IFTYPE_WIREGUARD, sizeof(config_IFTYPE_WIREGUARD),
+        IFF_UP, IFF_UP
+    );
     config_setWgDevice();
     config_printWgPublicKey();
     config_addWgPeer1Route();

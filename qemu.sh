@@ -6,6 +6,7 @@ cleanup() {
     set +e
     ip link del qemu1
     ip link del qemu2
+    ip link del qemu3
 }
 
 if test ! -f "disk2.img"; then
@@ -31,5 +32,10 @@ ip link set qemu1 up
 ip tuntap add mode tap qemu2
 ip link set qemu2 up
 qemu_cmd="$qemu_cmd -netdev tap,id=net2,ifname=qemu2,script=no,downscript=no -device e1000,netdev=net2"
+
+# NIC 3
+ip tuntap add mode tap qemu3
+ip link set qemu3 up
+qemu_cmd="$qemu_cmd -netdev tap,id=net3,ifname=qemu3,script=no,downscript=no -device e1000,netdev=net3"
 
 $qemu_cmd

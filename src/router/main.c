@@ -36,10 +36,10 @@ int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
 
     struct dhcpServer dhcpServer;
     uint8_t lanIp[4] hc_ALIGNED(4) = { 10, 123, 0, 1 };
-    dhcpServer_init(&dhcpServer, 3, *(uint32_t *)&lanIp[0]);
+    dhcpServer_init(&dhcpServer, 4, *(uint32_t *)&lanIp[0]);
 
     struct packetDumper wanDumper;
-    packetDumper_init(&wanDumper, 2);
+    packetDumper_init(&wanDumper, config_WAN_IF_INDEX);
 
     // Setup epoll.
     int32_t epollFd = sys_epoll_create1(0);
