@@ -1,4 +1,5 @@
 #include "hc/hc.h"
+#include "hc/math.c"
 #include "hc/util.c"
 #include "hc/libc/small.c"
 #include "hc/linux/linux.h"
@@ -132,7 +133,7 @@ static int32_t handleInstallation(void) {
         if (read <= 0) return -9;
 
         // Rewrite volume id.
-        if (util_RANGES_OVERLAP(0x27, 0x27 + 4, totalWritten, totalWritten + (uint64_t)read)) {
+        if (math_RANGES_OVERLAP(0x27, 0x27 + 4, totalWritten, totalWritten + (uint64_t)read)) {
             uint64_t volumeIdOffset = 0x27 - totalWritten;
             for (uint64_t i = 0; i < 4; ++i) {
                 if (volumeIdOffset + i < (uint64_t)read) hc_MEMCPY(&buffer[volumeIdOffset + i], (char *)&volumeId + i, 1);

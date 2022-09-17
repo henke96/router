@@ -16,7 +16,7 @@ static hc_COLD void acpi_init(void) {
         struct genlmsghdr genHdr;
         struct nlattr familyNameAttr;
         char familyName[sizeof(ACPI_EVENT_FAMILY_NAME)];
-        char familyNamePad[util_PAD_BYTES(sizeof(ACPI_EVENT_FAMILY_NAME), 4)];
+        char familyNamePad[math_PAD_BYTES(sizeof(ACPI_EVENT_FAMILY_NAME), 4)];
     };
     struct getFamilyRequest request = {
         .hdr = {
@@ -38,7 +38,7 @@ static hc_COLD void acpi_init(void) {
 
     for (
         struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
-        attr = (void *)&((char *)attr)[util_ALIGN_FORWARD(attr->nla_len, 4)]
+        attr = (void *)&((char *)attr)[math_ALIGN_FORWARD(attr->nla_len, 4)]
     ) {
         if (attr->nla_type == CTRL_ATTR_FAMILY_ID) {
             acpi.familyId = *(uint16_t *)&attr[1];

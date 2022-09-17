@@ -34,7 +34,7 @@ static hc_COLD void config_init(void) {
         struct genlmsghdr genHdr;
         struct nlattr familyNameAttr;
         char familyName[sizeof(WG_GENL_NAME)];
-        char familyNamePad[util_PAD_BYTES(sizeof(WG_GENL_NAME), 4)];
+        char familyNamePad[math_PAD_BYTES(sizeof(WG_GENL_NAME), 4)];
     };
     struct getFamilyRequest request = {
         .hdr = {
@@ -57,7 +57,7 @@ static hc_COLD void config_init(void) {
     // Iterate over all attributes, assume CTRL_ATTR_FAMILY_ID is one of them.
     for (
         struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
-        attr = (void *)&((char *)attr)[util_ALIGN_FORWARD(attr->nla_len, 4)]
+        attr = (void *)&((char *)attr)[math_ALIGN_FORWARD(attr->nla_len, 4)]
     ) {
         if (attr->nla_type == CTRL_ATTR_FAMILY_ID) {
             config.wgFamilyId = *(uint16_t *)&attr[1];
@@ -360,7 +360,7 @@ static hc_COLD void config_printWgPublicKey(void) {
     // Iterate over all attributes, assume WGDEVICE_A_PUBLIC_KEY is one of them.
     for (
         struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
-        attr = (void *)&((char *)attr)[util_ALIGN_FORWARD(attr->nla_len, 4)]
+        attr = (void *)&((char *)attr)[math_ALIGN_FORWARD(attr->nla_len, 4)]
     ) {
         if (attr->nla_type == WGDEVICE_A_PUBLIC_KEY) {
             hc_MEMCPY(config.wgPublicKey, (uint8_t *)&attr[1], 32);

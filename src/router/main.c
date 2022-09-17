@@ -1,4 +1,5 @@
 #include "hc/hc.h"
+#include "hc/math.c"
 #include "hc/util.c"
 #include "hc/base64.c"
 #include "hc/libc/small.c"
