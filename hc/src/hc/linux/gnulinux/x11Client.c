@@ -1,6 +1,6 @@
 struct x11Client {
     struct x11_setupResponse *setupResponse;
-    int32_t setupResponseLength;
+    int32_t setupResponseSize;
     int32_t socketFd;
     uint8_t receiveBuffer[4096];
     uint32_t receiveLength;
@@ -33,11 +33,11 @@ static int32_t x11Client_init(struct x11Client *self, void *sockaddr, int32_t so
     struct iovec iov[5] = {
         { .iov_base = &request,        .iov_len = sizeof(request) },
         { .iov_base = authEntry->name, .iov_len = request.authProtocolNameLength },
-        { .iov_base = &request,        .iov_len = util_PAD_BYTES(request.authProtocolNameLength, 4) },
+        { .iov_base = &request,        .iov_len = math_PAD_BYTES(request.authProtocolNameLength, 4) },
         { .iov_base = authEntry->data, .iov_len = request.authProtocolDataLength },
-        { .iov_base = &request,        .iov_len = util_PAD_BYTES(request.authProtocolDataLength, 4) }
+        { .iov_base = &request,        .iov_len = math_PAD_BYTES(request.authProtocolDataLength, 4) }
     };
-    int64_t sendLength = sizeof(request) + util_ALIGN_FORWARD(request.authProtocolNameLength, 4) + util_ALIGN_FORWARD(request.authProtocolDataLength, 4);
+    int64_t sendLength = sizeof(request) + math_ALIGN_FORWARD(request.authProtocolNameLength, 4) + math_ALIGN_FORWARD(request.authProtocolDataLength, 4);
     if (sys_sendmsg(self->socketFd, &(struct msghdr) { .msg_iov = &iov[0], .msg_iovlen = 5 }, MSG_NOSIGNAL) != sendLength) {
         status = -3;
         goto cleanup_socket;
@@ -74,8 +74,8 @@ static int32_t x11Client_init(struct x11Client *self, void *sockaddr, int32_t so
     }
 
     // Allocate space for rest of response.
-    self->setupResponseLength = 8 + (int32_t)response.length * 4;
-    self->setupResponse = sys_mmap(NULL, self->setupResponseLength, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+    self->setupResponseSize = 8 + (int32_t)response.length * 4;
+    self->setupResponse = sys_mmap(NULL, self->setupResponseSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
     if ((int64_t)self->setupResponse < 0) {
         status = -7;
         goto cleanup_socket;
@@ -83,9 +83,9 @@ static int32_t x11Client_init(struct x11Client *self, void *sockaddr, int32_t so
     hc_MEMCPY(self->setupResponse, &response, sizeof(response));
 
     // Read rest of response.
-    while (numRead < self->setupResponseLength) {
+    while (numRead < self->setupResponseSize) {
         char *readPos = &((char *)self->setupResponse)[numRead];
-        int64_t read = sys_recvfrom(self->socketFd, readPos, self->setupResponseLength - numRead, 0, NULL, NULL);
+        int64_t read = sys_recvfrom(self->socketFd, readPos, self->setupResponseSize - numRead, 0, NULL, NULL);
         if (read <= 0) {
             status = -8;
             goto cleanup_setupResponse;
@@ -95,7 +95,7 @@ static int32_t x11Client_init(struct x11Client *self, void *sockaddr, int32_t so
     return 0;
 
     cleanup_setupResponse:
-    debug_CHECK(sys_munmap(self->setupResponse, self->setupResponseLength), RES == 0);
+    debug_CHECK(sys_munmap(self->setupResponse, self->setupResponseSize), RES == 0);
     cleanup_socket:
     debug_CHECK(sys_close(self->socketFd), RES == 0);
     return status;
@@ -137,6 +137,8 @@ static int32_t x11Client_receive(struct x11Client *self) {
 }
 
 // Returns length of next message, 0 if no messages are buffered.
+// If the message won't fit the buffer, the length is returned negated.
+// It's up to the caller to solve that situation manually, or treat it as an error.
 static int32_t x11Client_nextMessage(struct x11Client *self) {
     if (self->receiveLength < 1) return 0;
     uint8_t typeMasked = self->receiveBuffer[0] & x11_TYPE_MASK;
@@ -144,10 +146,15 @@ static int32_t x11Client_nextMessage(struct x11Client *self) {
         // Errors and standard events are all 32 bytes.
         return self->receiveLength >= 32 ? 32 : 0;
     }
-    // 8 bytes must have been read to figure out reply or generic event length.
-    if (self->receiveLength < 8) return 0;
-    uint32_t length = 8 + *(uint32_t *)&self->receiveBuffer[4];
-    return (self->receiveLength >> 2) >= length ? (int32_t)(length << 2) : 0;
+    // Read atleast 32 bytes before calculating reply or generic event length.
+    if (self->receiveLength < 32) return 0;
+    uint32_t length = *(uint32_t *)&self->receiveBuffer[4];
+    if (length > (INT32_MAX - 32) / 4) return 0; // Too long, would overflow.
+
+    uint32_t realLength = 32 + length * 4;
+    if (realLength > sizeof(self->receiveBuffer)) return (int32_t)-realLength;
+    if (self->receiveLength >= realLength) return (int32_t)realLength;
+    return 0;
 }
 
 // Acks a message of length `length`, so that the next one can be read.
@@ -157,6 +164,6 @@ static void x11Client_ackMessage(struct x11Client *self, int32_t length) {
 }
 
 static void x11Client_deinit(struct x11Client *self) {
-    debug_CHECK(sys_munmap(self->setupResponse, self->setupResponseLength), RES == 0);
+    debug_CHECK(sys_munmap(self->setupResponse, self->setupResponseSize), RES == 0);
     debug_CHECK(sys_close(self->socketFd), RES == 0);
 }

@@ -13,6 +13,11 @@
 
 #define x11_ATOM_NONE 0
 #define x11_ATOM_ATOM 4
+#define x11_ATOM_CARDINAL 6
+
+#define x11_NET_WM_STATE_REMOVE 0
+#define x11_NET_WM_STATE_ADD 1
+#define x11_NET_WM_STATE_TOGGLE 2
 
 // Set-of-event bits.
 #define x11_EVENT_KEY_PRESS_BIT 0x1
@@ -100,9 +105,9 @@ struct x11_setupRequest {
     uint16_t authProtocolDataLength;
     uint8_t __pad2[2];
     uint8_t data[]; // char authProtocolName[authProtocolNameLength];
-                    // __pad3[util_PAD_BYTES(authProtocolNameLength, 4)];
+                    // __pad3[math_PAD_BYTES(authProtocolNameLength, 4)];
                     // uint8_t authProtocolData[authProtocolDataLength];
-                    // __pad4[util_PAD_BYTES(authProtocolDataLength, 4)];
+                    // __pad4[math_PAD_BYTES(authProtocolDataLength, 4)];
 };
 
 #define x11_setupResponse_SUCCESS 1
@@ -128,9 +133,176 @@ struct x11_setupResponse {
     uint8_t maxKeycode;
     uint8_t __pad2[4];
     uint8_t data[]; // char vendor[vendorLength];
-                    // uint8_t __pad[util_PAD_BYTES(vendorLength, 4)];
+                    // uint8_t __pad[math_PAD_BYTES(vendorLength, 4)];
                     // struct x11_format pixmapFormats[numPixmapFormats];
                     // struct x11_screen roots[numRoots]; (x11_screen is variable length!)
+};
+
+// Protocol events.
+#define x11_keyPress_TYPE 2
+struct x11_keyPress {
+    uint8_t type;
+    uint8_t detail;
+    uint16_t sequenceNumber;
+    uint32_t timeMs;
+    uint32_t windowId;
+    uint32_t eventWindowId;
+    uint32_t childWindowId;
+    int16_t rootX;
+    int16_t rootY;
+    int16_t eventX;
+    int16_t eventY;
+    uint16_t state;
+    uint8_t sameScreen;
+    uint8_t __pad;
+};
+
+#define x11_keyRelease_TYPE 3
+struct x11_keyRelease {
+    uint8_t type;
+    uint8_t detail;
+    uint16_t sequenceNumber;
+    uint32_t timeMs;
+    uint32_t windowId;
+    uint32_t eventWindowId;
+    uint32_t childWindowId;
+    int16_t rootX;
+    int16_t rootY;
+    int16_t eventX;
+    int16_t eventY;
+    uint16_t state;
+    uint8_t sameScreen;
+    uint8_t __pad;
+};
+
+#define x11_buttonPress_TYPE 4
+struct x11_buttonPress {
+    uint8_t type;
+    uint8_t detail;
+    uint16_t sequenceNumber;
+    uint32_t timeMs;
+    uint32_t windowId;
+    uint32_t eventWindowId;
+    uint32_t childWindowId;
+    int16_t rootX;
+    int16_t rootY;
+    int16_t eventX;
+    int16_t eventY;
+    uint16_t state;
+    uint8_t sameScreen;
+    uint8_t __pad;
+};
+
+#define x11_buttonRelease_TYPE 5
+struct x11_buttonRelease {
+    uint8_t type;
+    uint8_t detail;
+    uint16_t sequenceNumber;
+    uint32_t timeMs;
+    uint32_t windowId;
+    uint32_t eventWindowId;
+    uint32_t childWindowId;
+    int16_t rootX;
+    int16_t rootY;
+    int16_t eventX;
+    int16_t eventY;
+    uint16_t state;
+    uint8_t sameScreen;
+    uint8_t __pad;
+};
+
+#define x11_motionNotify_TYPE 6
+struct x11_motionNotify {
+    uint8_t type;
+    uint8_t detail;
+    uint16_t sequenceNumber;
+    uint32_t timeMs;
+    uint32_t windowId;
+    uint32_t eventWindowId;
+    uint32_t childWindowId;
+    int16_t rootX;
+    int16_t rootY;
+    int16_t eventX;
+    int16_t eventY;
+    uint16_t keyButtonState;
+    uint8_t sameScreen;
+    uint8_t __pad;
+};
+
+#define x11_focusOut_TYPE 10
+struct x11_focusOut {
+    uint8_t type;
+    uint8_t detail;
+    uint16_t sequenceNumber;
+    uint32_t eventWindowId;
+    uint8_t mode;
+    uint8_t __pad[23];
+};
+
+#define x11_expose_TYPE 12
+struct x11_expose {
+    uint8_t type;
+    uint8_t __pad;
+    uint16_t sequenceNumber;
+    uint32_t windowId;
+    uint16_t x;
+    uint16_t y;
+    uint16_t width;
+    uint16_t height;
+    uint16_t count;
+    uint8_t __pad2[14];
+};
+
+#define x11_mapNotify_TYPE 19
+struct x11_mapNotify {
+    uint8_t type;
+    uint8_t __pad;
+    uint16_t sequenceNumber;
+    uint32_t eventWindowId;
+    uint32_t windowId;
+    uint8_t overrideRedirect;
+    uint8_t __pad2[19];
+};
+
+#define x11_configureNotify_TYPE 22
+struct x11_configureNotify {
+    uint8_t type;
+    uint8_t __pad;
+    uint16_t sequenceNumber;
+    uint32_t eventWindowId;
+    uint32_t windowId;
+    uint32_t aboveSiblingWindowId;
+    int16_t x;
+    int16_t y;
+    uint16_t width;
+    uint16_t height;
+    uint16_t borderWidth;
+    uint8_t overrideRedirect;
+    uint8_t __pad2[5];
+};
+
+#define x11_clientMessage_TYPE 33
+struct x11_clientMessage {
+    uint8_t type;
+    uint8_t format;
+    uint16_t sequenceNumber;
+    uint32_t window;
+    uint32_t atom;
+    union {
+        uint8_t data8[20];
+        uint16_t data16[10];
+        uint32_t data32[5];
+    };
+};
+
+#define x11_genericEvent_TYPE 35
+struct x11_genericEvent {
+    uint8_t type;
+    uint8_t extension;
+    uint16_t sequenceNumber;
+    uint32_t length;
+    uint16_t eventType;
+    uint8_t data[];
 };
 
 // Protocol requests and responses.
@@ -221,7 +393,7 @@ struct x11_internAtom {
     uint16_t nameLength;
     uint16_t __pad;
     uint8_t data[]; // char name[nameLength];
-                    // uint8_t __pad2[util_PAD_BYTES(nameLength, 4)];
+                    // uint8_t __pad2[math_PAD_BYTES(nameLength, 4)];
 };
 
 struct x11_internAtomResponse {
@@ -248,7 +420,19 @@ struct x11_changeProperty {
     uint8_t __pad[3];
     uint32_t dataLength; // In `format` units.
     uint8_t data[]; // format_t data[dataLength];
-                    // uint8_t __pad2[util_PAD_BYTES(sizeof(format_t) * dataLength, 4)];
+                    // uint8_t __pad2[math_PAD_BYTES(sizeof(format_t) * dataLength, 4)];
+};
+
+#define x11_sendEvent_OPCODE 25
+struct x11_sendEvent {
+    uint8_t opcode;
+    uint8_t propagate;
+    uint16_t length;
+    uint32_t destWindowId;
+    uint32_t eventMask;
+    union {
+        struct x11_clientMessage clientMessage;
+    };
 };
 
 #define x11_grabPointer_OPCODE 26
@@ -267,6 +451,14 @@ struct x11_grabPointer {
     uint32_t time;
 };
 
+#define x11_ungrabPointer_OPCODE 27
+struct x11_ungrabPointer {
+    uint8_t opcode;
+    uint8_t __pad;
+    uint16_t length;
+    uint32_t time; // Set to 0 for CurrentTime.
+};
+
 #define x11_queryExtension_OPCODE 98
 struct x11_queryExtension {
     uint8_t opcode;
@@ -275,7 +467,7 @@ struct x11_queryExtension {
     uint16_t nameLength;
     uint16_t __pad2;
     uint8_t data[]; // char name[nameLength];
-                    // uint8_t __pad3[util_PAD_BYTES(nameLength, 4)];
+                    // uint8_t __pad3[math_PAD_BYTES(nameLength, 4)];
 };
 
 struct x11_queryExtensionResponse {
@@ -290,89 +482,39 @@ struct x11_queryExtensionResponse {
     uint8_t __pad2[20];
 };
 
-// Protocol events.
-#define x11_motionNotify_TYPE 6
-struct x11_motionNotify {
-    uint8_t type;
-    uint8_t detail;
-    uint16_t sequenceNumber;
-    uint32_t timeMs;
-    uint32_t windowId;
-    uint32_t eventWindowId;
-    uint32_t childWindowId;
-    int16_t rootX;
-    int16_t rootY;
-    int16_t eventX;
-    int16_t eventY;
-    uint16_t keyButtonState;
-    uint8_t sameScreen;
+#define x11_getKeyboardMapping_OPCODE 101
+struct x11_getKeyboardMapping {
+    uint8_t opcode;
     uint8_t __pad;
+    uint16_t length;
+    uint8_t firstKeycode;
+    uint8_t count;
+    uint8_t __pad2[2];
 };
 
-#define x11_expose_TYPE 12
-struct x11_expose {
+struct x11_getKeyboardMappingResponse {
     uint8_t type;
-    uint8_t __pad;
-    uint16_t sequenceNumber;
-    uint32_t windowId;
-    uint16_t x;
-    uint16_t y;
-    uint16_t width;
-    uint16_t height;
-    uint16_t count;
-    uint8_t __pad2[14];
-};
-
-#define x11_mapNotify_TYPE 19
-struct x11_mapNotify {
-    uint8_t type;
-    uint8_t __pad;
-    uint16_t sequenceNumber;
-    uint32_t eventWindowId;
-    uint32_t windowId;
-    uint8_t overrideRedirect;
-    uint8_t __pad2[19];
-};
-
-#define x11_configureNotify_TYPE 22
-struct x11_configureNotify {
-    uint8_t type;
-    uint8_t __pad;
-    uint16_t sequenceNumber;
-    uint32_t eventWindowId;
-    uint32_t windowId;
-    uint32_t aboveSiblingWindowId;
-    int16_t x;
-    int16_t y;
-    uint16_t width;
-    uint16_t height;
-    uint16_t borderWidth;
-    uint8_t overrideRedirect;
-    uint8_t __pad2[5];
-};
-
-#define x11_clientMessage_TYPE 33
-struct x11_clientMessage {
-    uint8_t type;
-    uint8_t format;
-    uint16_t sequenceNumber;
-    uint32_t window;
-    uint32_t atom;
-    union {
-        uint8_t data8[20];
-        uint16_t data16[10];
-        uint32_t data32[5];
-    };
-};
-
-#define x11_genericEvent_TYPE 35
-struct x11_genericEvent {
-    uint8_t type;
-    uint8_t extension;
+    uint8_t keysymsPerKeycode;
     uint16_t sequenceNumber;
     uint32_t length;
-    uint16_t eventType;
-    uint8_t data[];
+    uint8_t __pad[24];
+    uint32_t keysyms[];
+};
+
+#define x11_getModifierMapping_OPCODE 119
+struct x11_getModifierMapping {
+    uint8_t opcode;
+    uint8_t __pad;
+    uint16_t length;
+};
+
+struct x11_getModifierMappingResponse {
+    uint8_t type;
+    uint8_t keycodesPerModifier;
+    uint16_t sequenceNumber;
+    uint32_t length;
+    uint8_t __pad[24];
+    uint8_t keycodes[];
 };
 
 // XInput2 extension.
