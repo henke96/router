@@ -14,7 +14,13 @@ static char buffer[66000] hc_ALIGNED(8); // Netlink wants 8192, see NLMSG_GOODSI
                                          // packetDumper wants to support jumbo frames, so use 66000 to be (very) safe.
 
 static void epollAdd(int32_t epollFd, int32_t fd) {
-    CHECK(sys_epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &(struct epoll_event) { .events = EPOLLIN, .data.fd = fd }), RES == 0);
+    int32_t status = sys_epoll_ctl(
+        epollFd,
+        EPOLL_CTL_ADD,
+        fd,
+        &(struct epoll_event) { .events = EPOLLIN, .data.fd = fd }
+    );
+    CHECK(status, RES == 0);
 }
 
 #include "dhcp.h"
@@ -25,6 +31,7 @@ static void epollAdd(int32_t epollFd, int32_t fd) {
 #include "dhcpServer.c"
 #include "iptables.c"
 #include "packetDumper.c"
+#include "modemClient.c"
 
 int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     acpi_init();
@@ -41,6 +48,9 @@ int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     struct packetDumper wanDumper;
     packetDumper_init(&wanDumper, config_WAN_IF_INDEX);
 
+    struct modemClient modemClient;
+    modemClient_init(&modemClient, "/dev/ttyUSB2");
+
     // Setup epoll.
     int32_t epollFd = sys_epoll_create1(0);
     CHECK(epollFd, RES > 0);
@@ -49,21 +59,25 @@ int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     epollAdd(epollFd, dhcpClient.timerFd);
     epollAdd(epollFd, dhcpServer.fd);
     epollAdd(epollFd, wanDumper.listenFd);
+    epollAdd(epollFd, modemClient.timerFd);
 
     for (;;) {
         struct epoll_event event;
         CHECK(sys_epoll_pwait(epollFd, &event, 1, -1, NULL), RES == 1);
         if (event.data.fd == acpi.netlinkFd) break;
 
-        if (event.data.fd == dhcpClient.fd) dhcpClient_onMessage();
-        else if (event.data.fd == dhcpClient.timerFd) dhcpClient_onTimer();
-        else if (event.data.fd == dhcpServer.fd) dhcpServer_onMessage(&dhcpServer);
+        if (event.data.fd == dhcpClient.fd) dhcpClient_onFd();
+        else if (event.data.fd == dhcpClient.timerFd) dhcpClient_onTimerFd();
+        else if (event.data.fd == dhcpServer.fd) dhcpServer_onFd(&dhcpServer);
         else if (event.data.fd == wanDumper.listenFd) packetDumper_onListenFd(&wanDumper, epollFd);
         else if (event.data.fd == wanDumper.packetFd) packetDumper_onPacketFd(&wanDumper);
         else if (event.data.fd == wanDumper.clientFd) packetDumper_onClientFd(&wanDumper);
+        else if (event.data.fd == modemClient.timerFd) modemClient_onTimerFd(&modemClient, epollFd);
+        else if (event.data.fd == modemClient.fd) modemClient_onFd(&modemClient);
         else hc_UNREACHABLE;
     }
 
+    modemClient_deinit(&modemClient);
     packetDumper_deinit(&wanDumper);
     dhcpServer_deinit(&dhcpServer);
     dhcpClient_deinit();

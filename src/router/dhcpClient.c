@@ -7,7 +7,9 @@ struct dhcpClient {
     int32_t dnsIp; // 0 if none.
     uint32_t currentIdentifier;
     uint32_t leasedIp; // Currently leased ip, 0 if none.
+    int32_t leasedIpNetmask; // 0 if none.
     uint32_t renewServerIp; // The server to renew the lease from.
+    char __pad[4];
 };
 
 static struct dhcpClient dhcpClient = { 0 };
@@ -37,13 +39,14 @@ static hc_COLD void dhcpClient_init(void) {
     CHECK(sys_bind(dhcpClient.fd, &addr, sizeof(addr)), RES == 0);
 
     // Create timer fd, and set initial timeout.
-    CHECK(dhcpClient.timerFd = sys_timerfd_create(CLOCK_MONOTONIC, 0), RES > 0);
+    dhcpClient.timerFd = sys_timerfd_create(CLOCK_MONOTONIC, 0);
+    CHECK(dhcpClient.timerFd, RES > 0);
 
     struct itimerspec timeout = { .it_value = { .tv_sec = 10 } };
     CHECK(sys_timerfd_settime(dhcpClient.timerFd, 0, &timeout, NULL), RES == 0);
 }
 
-static void dhcpClient_onTimer(void) {
+static void dhcpClient_onTimerFd(void) {
     uint64_t expirations;
     CHECK(sys_read(dhcpClient.timerFd, &expirations, sizeof(expirations)), RES == sizeof(expirations));
     debug_ASSERT(expirations == 1);
@@ -130,7 +133,7 @@ static void dhcpClient_onTimer(void) {
     CHECK(sys_timerfd_settime(dhcpClient.timerFd, 0, &timeout, NULL), RES == 0);
 }
 
-static void dhcpClient_onMessage(void) {
+static void dhcpClient_onFd(void) {
     int64_t read = sys_read(dhcpClient.fd, &buffer[0], sizeof(buffer));
     debug_ASSERT(read > 0);
     if (read < (int64_t)sizeof(struct dhcp_header)) return;
@@ -266,27 +269,29 @@ static void dhcpClient_onMessage(void) {
 
             uint32_t netmask;
             hc_MEMCPY(&netmask, &subnetMask->data[0], 4);
+            dhcpClient.leasedIpNetmask = hc_POPCOUNT32(netmask);
 
             // Record new IP lease and renew-server.
             hc_MEMCPY(&dhcpClient.renewServerIp, &header->serverIp, 4);
             if (hc_MEMCMP(&dhcpClient.leasedIp, &header->yourIp[0], 4) != 0) {
                 hc_MEMCPY(&dhcpClient.leasedIp, &header->yourIp[0], 4);
 
-                char *octet1 = util_intToStr(&buffer[3], header->yourIp[0]);
-                char *octet2 = util_intToStr(&buffer[6], header->yourIp[1]);
-                char *octet3 = util_intToStr(&buffer[9], header->yourIp[2]);
-                char *octet4 = util_intToStr(&buffer[12], header->yourIp[3]);
-                sys_writev(STDOUT_FILENO, (struct iovec[9]) {
+                char printBuffer[18];
+                char *pos = util_intToStr(&printBuffer[18], dhcpClient.leasedIpNetmask);
+                *--pos = '/';
+                pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[3]);
+                *--pos = '.';
+                pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[2]);
+                *--pos = '.';
+                pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[1]);
+                *--pos = '.';
+                pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[0]);
+
+                sys_writev(STDOUT_FILENO, (struct iovec[3]) {
                     { .iov_base = "New IP leased: ", .iov_len = 15 },
-                    { .iov_base = octet1, .iov_len = (int64_t)(&buffer[3] - octet1) },
-                    { .iov_base = ".", .iov_len = 1 },
-                    { .iov_base = octet2, .iov_len = (int64_t)(&buffer[6] - octet2) },
-                    { .iov_base = ".", .iov_len = 1 },
-                    { .iov_base = octet3, .iov_len = (int64_t)(&buffer[9] - octet3) },
-                    { .iov_base = ".", .iov_len = 1 },
-                    { .iov_base = octet4, .iov_len = (int64_t)(&buffer[12] - octet4) },
+                    { .iov_base = pos, .iov_len = (int64_t)(&printBuffer[18] - pos) },
                     { .iov_base = "\n", .iov_len = 1 }
-                }, 9);
+                }, 3);
             }
 
             // Add the address.
@@ -305,7 +310,7 @@ static void dhcpClient_onMessage(void) {
                     },
                     .addrMsg = {
                         .ifa_family = AF_INET,
-                        .ifa_prefixlen = (uint8_t)hc_POPCOUNT32(netmask),
+                        .ifa_prefixlen = (uint8_t)dhcpClient.leasedIpNetmask,
                         .ifa_index = dhcp_IFINDEX
                     },
                     .addrAttr = {

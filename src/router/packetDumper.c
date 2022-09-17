@@ -1,12 +1,13 @@
 struct packetDumper {
     int32_t listenFd;
-    int32_t clientFd; // Invalid if not dumping.
+    int32_t clientFd; // -1 if not dumping.
     int32_t packetFd; // -1 if not dumping.
     int32_t ifIndex;
 };
 
 static hc_COLD void packetDumper_init(struct packetDumper *self, int32_t ifIndex) {
     self->ifIndex = ifIndex;
+    self->clientFd = -1;
     self->packetFd = -1;
 
     self->listenFd = sys_socket(AF_INET, SOCK_STREAM, 0);
@@ -26,6 +27,7 @@ static void packetDumper_stop(struct packetDumper *self) {
         debug_CHECK(sys_close(self->packetFd), RES == 0);
         debug_CHECK(sys_close(self->clientFd), RES == 0);
         self->packetFd = -1;
+        self->clientFd = -1;
     }
 }
 

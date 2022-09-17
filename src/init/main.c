@@ -177,10 +177,9 @@ int32_t main(int32_t argc, char **argv) {
     if (cmdlineFd < 0) goto halt;
     if (sys_read(cmdlineFd, &buffer[0], 8) != 8) goto halt;
     if (sys_close(cmdlineFd) != 0) goto halt;
-    buffer[8] = ' ';
 
     uint64_t volumeId;
-    if (util_hexToUint(&buffer[0], ' ', &volumeId) == 0) goto halt;
+    if (util_hexToUint(&buffer[0], 8, &volumeId) <= 0) goto halt;
 
     // Find and mount the boot filesystem.
     while ((status = iterateDevices(volumeId & 0xFFFF, (uint32_t)(volumeId >> 16))) == 1) {

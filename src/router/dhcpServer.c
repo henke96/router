@@ -76,7 +76,7 @@ static hc_COLD void dhcpServer_init(struct dhcpServer *self, int32_t ifIndex, ui
     CHECK(sys_bind(self->fd, &addr, sizeof(addr)), RES == 0);
 }
 
-static void dhcpServer_onMessage(struct dhcpServer *self) {
+static void dhcpServer_onFd(struct dhcpServer *self) {
     int64_t read = sys_read(self->fd, &buffer[0], sizeof(buffer));
     debug_ASSERT(read > 0);
     if (read < (int64_t)sizeof(struct dhcp_header)) return;
