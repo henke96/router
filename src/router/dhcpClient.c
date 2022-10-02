@@ -47,7 +47,7 @@ static hc_COLD void dhcpClient_init(void) {
 }
 
 static void dhcpClient_onTimerFd(void) {
-    uint64_t expirations;
+    uint64_t expirations = 0; // Make clang-analyzer happy.
     CHECK(sys_read(dhcpClient.timerFd, &expirations, sizeof(expirations)), RES == sizeof(expirations));
     debug_ASSERT(expirations == 1);
 

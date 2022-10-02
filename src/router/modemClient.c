@@ -103,7 +103,7 @@ static hc_COLD void modemClient_onTimerFd(struct modemClient *self, int32_t epol
         if (self->fd < 0) goto out_fail;
 
         // Disable weird tty features, except ignoring CR. See termios(3).
-        struct termios termios;
+        struct termios termios = {0};
         if (sys_ioctl(self->fd, TCGETS, &termios) != 0) goto out_fail;
         termios.c_iflag = IGNCR;
         termios.c_oflag &= ~(OPOST | OLCUC | ONLCR | OCRNL | ONLRET);

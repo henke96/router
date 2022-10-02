@@ -64,6 +64,7 @@ int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
 
     for (;;) {
         struct epoll_event event;
+        event.data.fd = 0;
         CHECK(sys_epoll_pwait(epollFd, &event, 1, -1, NULL), RES == 1);
         if (event.data.fd == acpi.netlinkFd) break;
 
@@ -75,7 +76,7 @@ int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
         else if (event.data.fd == wanDumper.clientFd) packetDumper_onClientFd(&wanDumper);
         else if (event.data.fd == modemClient.timerFd) modemClient_onTimerFd(&modemClient, epollFd);
         else if (event.data.fd == modemClient.fd) modemClient_onFd(&modemClient);
-        else hc_UNREACHABLE;
+        else debug_ASSERT(0);
     }
 
     modemClient_deinit(&modemClient);

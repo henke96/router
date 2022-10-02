@@ -54,6 +54,7 @@ static int32_t iterateDevices(int32_t majorDev, uint32_t minorDev) {
             current = (void *)&((char *)current)[current->d_reclen]
         ) {
             struct statx statx;
+            statx.stx_rdev_major = 0;
             if (sys_statx(devFd, &current->d_name[0], 0, 0, &statx) < 0) return -3;
             if (statx.stx_rdev_major == 0) continue;
             if (majorDev > 0 && ((uint32_t)majorDev != statx.stx_rdev_major || minorDev != statx.stx_rdev_minor)) continue;
@@ -124,13 +125,15 @@ static int32_t handleInstallation(void) {
     int32_t destFd = sys_openat(-1, &buffer[buffer_DEVNAME_OFFSET], O_WRONLY, 0);
     if (destFd < 0) return -7;
     struct statx statx;
+    statx.stx_rdev_major = 0;
     if (sys_statx(destFd, "", AT_EMPTY_PATH, 0, &statx) != 0) return -8;
+    if (statx.stx_rdev_major == 0) return -9; // Not a device.
     uint32_t volumeId = (statx.stx_rdev_minor << 16) | statx.stx_rdev_major;
 
     // Perform installation.
     for (uint64_t totalWritten = 0; totalWritten < IMAGE_INSTALL_SIZE;) {
         int64_t read = sys_read(sourceFd, &buffer[0], buffer_DEVNAME_OFFSET);
-        if (read <= 0) return -9;
+        if (read <= 0) return -10;
 
         // Rewrite volume id.
         if (math_RANGES_OVERLAP(0x27, 0x27 + 4, totalWritten, totalWritten + (uint64_t)read)) {
@@ -141,26 +144,26 @@ static int32_t handleInstallation(void) {
         }
 
         int64_t written = sys_write(destFd, &buffer[0], read);
-        if (written != read) return -10;
+        if (written != read) return -11;
         totalWritten += (uint64_t)written;
     }
-    if (sys_close(sourceFd) != 0) return -11;
-    if (sys_close(destFd) != 0) return -12;
+    if (sys_close(sourceFd) != 0) return -12;
+    if (sys_close(destFd) != 0) return -13;
 
     // Mount destination filesystem.
-    if (sys_mount(&buffer[buffer_DEVNAME_OFFSET], "/mnt", "msdos", MS_NOATIME, NULL) != 0) return -13;
+    if (sys_mount(&buffer[buffer_DEVNAME_OFFSET], "/mnt", "msdos", MS_NOATIME, NULL) != 0) return -14;
 
     // Remove installation file.
-    if (sys_unlinkat(-1, "/mnt/install", 0) != 0) return -14;
+    if (sys_unlinkat(-1, "/mnt/install", 0) != 0) return -15;
 
     // Generate wireguard key file if it doesn't exist.
     if (sys_faccessat(-1, "/mnt/wgkey", 0) != 0) {
         uint8_t key[32];
-        if (sys_getrandom(&key, sizeof(key), 0) != sizeof(key)) return -15;
+        if (sys_getrandom(&key, sizeof(key), 0) != sizeof(key)) return -16;
         int32_t keyFd = sys_openat(-1, "/mnt/wgkey", O_WRONLY | O_CREAT | O_EXCL, S_IRUSR);
-        if (keyFd < 0) return -16;
-        if (sys_write(keyFd, &key[0], sizeof(key)) != sizeof(key)) return -17;
-        if (sys_close(keyFd) != 0) return -18;
+        if (keyFd < 0) return -17;
+        if (sys_write(keyFd, &key[0], sizeof(key)) != sizeof(key)) return -18;
+        if (sys_close(keyFd) != 0) return -19;
     }
     return 1; // Success!
 }
@@ -215,6 +218,7 @@ int32_t main(int32_t argc, char **argv) {
     // Wait for children.
     for (;;) {
         struct rusage rusage;
+        rusage.ru_maxrss = 0;
         int32_t pid = sys_wait4(-1, &status, 0, &rusage);
         if (pid < 0) goto halt_umount;
 

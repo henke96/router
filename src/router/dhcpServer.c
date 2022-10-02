@@ -23,7 +23,7 @@ static int32_t dhcpServer_getEntry(struct dhcpServer *self, uint8_t *macAddr, bo
     int32_t oldestIndex;
     int64_t oldestTimeSec = INT64_MAX;
 
-    struct timespec currentTime;
+    struct timespec currentTime = {0};
     debug_CHECK(sys_clock_gettime(CLOCK_MONOTONIC, &currentTime), RES == 0);
 
     int32_t i = dhcpServer_NUM_ENTRIES;
