@@ -6,7 +6,7 @@
 
 static uint16_t linuxCmdLine[] = u"         mitigations=off video=efifb:width:800,height:480";
 
-int64_t main(void *imageHandle, struct efi_systemTable *systemTable) {
+int64_t _start(void *imageHandle, struct efi_systemTable *systemTable) {
     // Read fat volume id.
     struct efi_loadedImageProtocol *loadedImageProtocol;
     int64_t status = systemTable->bootServices->handleProtocol(imageHandle, &(struct efi_guid) efi_guid_LOADED_IMAGE_PROTOCOL, (void **)&loadedImageProtocol);
