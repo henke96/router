@@ -13,7 +13,11 @@ if test ! -f "disk2.img"; then
     dd if=/dev/zero of=disk2.img bs=1048576 count=16
 fi
 
-qemu_cmd="qemu-system-x86_64 -bios /usr/share/qemu/OVMF.fd -drive format=raw,file=disk.img -drive format=raw,file=disk2.img,if=none,id=nvm -device nvme,serial=deadbeef,drive=nvm -enable-kvm"
+qemu_cmd="qemu-system-x86_64 \
+-bios /usr/share/qemu/OVMF.fd \
+-drive format=raw,file=disk.img \
+-drive format=raw,file=disk2.img,if=none,id=disk2 -device ahci,id=ahci -device ide-hd,drive=disk2,bus=ahci.0 \
+-enable-kvm"
 trap cleanup EXIT
 trap "" INT # Make sure cleanup gets run on Ctrl-C.
 
