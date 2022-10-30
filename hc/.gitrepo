@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/henke96/hc.git
 	branch = master
-	commit = 3142ba0848f40a7d2c675ded012bf9fd900f2e82
-	parent = 595c9165f67b71b185c23729acf8a516d62b3a4f
+	commit = 7169e09b2075e1cdc50e5f8e3d83636979335421
+	parent = a6e8da39284ed648960e245eed1a1fe1e9d38471
 	method = merge
 	cmdver = 0.4.3
