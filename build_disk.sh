@@ -7,8 +7,8 @@ set -e
 
 cleanup() {
     set +e
-    umount $mnt
-    udisksctl loop-delete -b $dev
+    umount "$mnt"
+    udisksctl loop-delete -b "$dev"
 }
 trap cleanup EXIT
 
@@ -37,7 +37,7 @@ dd if=/dev/zero of=disk.img bs=1048576 count=8
 mkfs.fat -F 12 -i 0 -n ROUTER disk.img
 
 # Create loop device for disk.
-dev=$(udisksctl loop-setup -f disk.img | sed 's/^Mapped file disk.img as \(.\+\)\.$/\1/')
+dev=$(udisksctl loop-setup -f disk.img | sed 's/^Mapped file .\+ as \(.\+\)\.$/\1/')
 
 # Mount disk.
 mnt=$(udisksctl mount -b "$dev" | sed 's/^Mounted .\+ at \(.\+\)\.$/\1/')

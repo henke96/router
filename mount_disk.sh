@@ -3,7 +3,7 @@ set -e
 
 cleanup() {
     set +e
-    umount $mnt
+    umount "$mnt"
     udisksctl loop-delete -b "$dev"
 }
 
