@@ -3,16 +3,17 @@ set -e
 
 cleanup() {
     set +e
-    umount mnt
-    losetup -d $dev
+    umount $mnt
+    udisksctl loop-delete -b "$dev"
 }
 
-dev="$(losetup --show -P -f disk.img)"
 trap cleanup EXIT
 
-mkdir -p mnt/
-mount ${dev} mnt/
+# Create loop device for disk.
+dev=$(udisksctl loop-setup -f disk.img | sed 's/^Mapped file disk.img as \(.\+\)\.$/\1/')
 
-echo "Disk device is: $dev"
+# Mount disk.
+mnt=$(udisksctl mount -b "$dev" | sed 's/^Mounted .\+ at \(.\+\)\.$/\1/')
+
 echo "Entering shell, use Ctrl-D when done."
-$SHELL
+(cd "$mnt" && $SHELL)
