@@ -12,23 +12,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-LLVM="${LLVM:-1}"
-cc="clang$LLVM"
-objcopy="llvm-objcopy$LLVM"
-if test "$LLVM" -eq 1; then
-    cc="clang"
-    objcopy="llvm-objcopy"
-fi
-
 # Build everything for initramfs.
-CC=$cc OBJCOPY=$objcopy src/init/build.sh
-CC=$cc OBJCOPY=$objcopy src/router/build.sh
+src/init/build.sh
+src/router/build.sh
 
 # Build Linux.
-(cd linux/linux* && KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64 LLVM=$LLVM make -j)
+(cd linux/linux* && KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64 LLVM=${LLVM:-1} make -j)
 
 # Build bootloader.
-CC=$cc OBJCOPY=$objcopy src/bootloader/build.sh
+src/bootloader/build.sh
 
 # Create disk.
 dd if=/dev/zero of=disk.img bs=1048576 count=8
@@ -37,10 +29,10 @@ dd if=/dev/zero of=disk.img bs=1048576 count=8
 mkfs.fat -F 12 -i 0 -n ROUTER disk.img
 
 # Create loop device for disk.
-dev=$(udisksctl loop-setup -f disk.img | sed 's/^Mapped file .\+ as \(.\+\)\.$/\1/')
+dev=$(udisksctl loop-setup -f disk.img | sed -E 's/^Mapped file .+ as ([^.]+).*$/\1/')
 
 # Mount disk.
-mnt=$(udisksctl mount -b "$dev" | sed 's/^Mounted .\+ at \(.\+\)\.$/\1/')
+mnt=$(udisksctl mount -b "$dev" | sed -E 's/^Mounted .+ at ([^.]+).*$/\1/')
 
 # Install kernel.
 mkdir -p "$mnt/EFI/BOOT"
