@@ -1,9 +1,0 @@
-dir /proc 0555 0 0
-dir /sys 0555 0 0
-dir /mnt 0755 0 0
-dir /dev 0755 0 0
-nod /dev/console 0600 0 0 c 5 1
-
-# TODO: Use release binaries.
-file /init ../../src/init/debug.bin 0755 0 0
-file /router ../../src/router/debug.bin 0755 0 0
