@@ -621,8 +621,6 @@ struct WINDOWPLACEMENT {
     struct RECT deviceRect;
 };
 
-<<<<<<< HEAD
-=======
 // Memory Protection Constants.
 #define PAGE_EXECUTE 0x10
 #define PAGE_EXECUTE_READ 0x20
@@ -657,7 +655,6 @@ struct WINDOWPLACEMENT {
 #define MEM_COALESCE_PLACEHOLDERS 0x00000001
 #define MEM_PRESERVE_PLACEHOLDER 0x00000002
 
->>>>>>> e29325f67f5e6a51ade2018c4ac74db03177be57
 // kernel32.dll
 hc_DLLIMPORT uint32_t GetLastError(void);
 
@@ -679,12 +676,9 @@ hc_DLLIMPORT void *GetProcAddress(void *moduleHandle, const char *procName);
 hc_DLLIMPORT int32_t QueryPerformanceFrequency(int64_t *frequency);
 hc_DLLIMPORT int32_t QueryPerformanceCounter(int64_t *count);
 
-<<<<<<< HEAD
-=======
 hc_DLLIMPORT void *VirtualAlloc(void *address, uint64_t size, uint32_t allocationType, uint32_t protect);
 hc_DLLIMPORT int32_t VirtualFree(void *address, uint64_t size, uint32_t freeType);
 
->>>>>>> e29325f67f5e6a51ade2018c4ac74db03177be57
 // user32.dll
 hc_DLLIMPORT int32_t MessageBoxW(void *windowHandle, const uint16_t *text, const uint16_t *caption, uint32_t type);
 hc_DLLIMPORT uint16_t RegisterClassW(const struct WNDCLASSW *windowClass);
