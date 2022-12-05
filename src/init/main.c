@@ -51,7 +51,7 @@ static int32_t iterateDevices(int32_t majorDev, uint32_t minorDev) {
         for (
             struct linux_dirent64 *current = (void *)&buffer[0];
             current != (void *)&buffer[read];
-            current = (void *)&((char *)current)[current->d_reclen]
+            current = (void *)current + current->d_reclen
         ) {
             struct statx statx;
             statx.stx_rdev_major = 0;

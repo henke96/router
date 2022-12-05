@@ -150,7 +150,7 @@ static void dhcpClient_onFd(void) {
     struct dhcp_option *dns = NULL;
     struct dhcp_option *leaseTime = NULL;
     for (struct dhcp_option *current = (void *)&header->options[0];;) {
-        void *next = &((char *)current)[sizeof(*current) + current->length];
+        void *next = (void *)current + sizeof(*current) + current->length;
         if (next > end) break;
         switch (current->code) {
             case dhcp_MESSAGE_TYPE: {

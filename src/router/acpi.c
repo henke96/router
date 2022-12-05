@@ -38,7 +38,7 @@ static hc_COLD void acpi_init(void) {
 
     for (
         struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
-        attr = (void *)&((char *)attr)[math_ALIGN_FORWARD(attr->nla_len, 4)]
+        attr = (void *)attr + math_ALIGN_FORWARD(attr->nla_len, 4)
     ) {
         if (attr->nla_type == CTRL_ATTR_FAMILY_ID) {
             acpi.familyId = *(uint16_t *)&attr[1];
