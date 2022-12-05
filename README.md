@@ -1,6 +1,11 @@
-# Building Image
-1. Follow `linux/README.md`
-2. Run `./build_disk.sh` to build disk.img
+## HC
+Freestanding C with LLVM.
 
-# Running in Qemu
-1. Run `sudo ./qemu.sh`
+### Targets:
+| Binary Format | Architectures             | OS Support    |
+| ------------- | ------------------------- | ------------- |
+| Elf           | x86_64, aarch64, riscv64  | Linux         |
+| Pe            | x86_64, aarch64, riscv64* | Windows, Uefi |
+| Wasm          | wasm32                    | Wasi          |
+
+\* Waiting for LLVM support.

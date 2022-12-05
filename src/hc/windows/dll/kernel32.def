@@ -1,0 +1,18 @@
+LIBRARY "kernel32.dll"
+EXPORTS
+GetLastError
+AllocConsole
+FreeConsole
+AttachConsole
+ExitProcess
+TerminateProcess
+GetCurrentProcess
+GetStdHandle
+WriteFile
+LoadLibraryW
+FreeLibrary
+GetProcAddress
+QueryPerformanceFrequency
+QueryPerformanceCounter
+VirtualAlloc
+VirtualFree
