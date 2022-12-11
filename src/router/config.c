@@ -14,7 +14,6 @@
 
 struct config {
     int32_t rtnetlinkFd;
-    int32_t genetlinkFd;
     uint16_t wgFamilyId;
     uint16_t __pad;
     uint8_t wgPublicKey[32]; // Populated by config_configure().
@@ -25,45 +24,10 @@ static struct config config;
 static hc_COLD void config_init(void) {
     config.rtnetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
     CHECK(config.rtnetlinkFd, RES > 0);
-    config.genetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC);
-    CHECK(config.genetlinkFd, RES > 0);
 
-    // Get wireguard family id.
-    struct getFamilyRequest {
-        struct nlmsghdr hdr;
-        struct genlmsghdr genHdr;
-        struct nlattr familyNameAttr;
-        char familyName[sizeof(WG_GENL_NAME)];
-        char familyNamePad[math_PAD_BYTES(sizeof(WG_GENL_NAME), 4)];
-    };
-    struct getFamilyRequest request = {
-        .hdr = {
-            .nlmsg_len = sizeof(request),
-            .nlmsg_type = GENL_ID_CTRL,
-            .nlmsg_flags = NLM_F_REQUEST,
-        },
-        .genHdr = {
-            .cmd = CTRL_CMD_GETFAMILY,
-            .version = 1
-        },
-        .familyNameAttr = {
-            .nla_len = sizeof(request.familyNameAttr) + sizeof(request.familyName),
-            .nla_type = CTRL_ATTR_FAMILY_NAME
-        },
-        .familyName = WG_GENL_NAME
-    };
-    netlink_talk(config.genetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
-
-    // Iterate over all attributes, assume CTRL_ATTR_FAMILY_ID is one of them.
-    for (
-        struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
-        attr = (void *)attr + math_ALIGN_FORWARD(attr->nla_len, 4)
-    ) {
-        if (attr->nla_type == CTRL_ATTR_FAMILY_ID) {
-            config.wgFamilyId = *(uint16_t *)&attr[1];
-            break;
-        }
-    }
+    genetlink_requestFamily(WG_GENL_NAME);
+    struct nlattr *wgFamilyId = genetlink_findAttr(CTRL_ATTR_FAMILY_ID);
+    config.wgFamilyId = *(uint16_t *)&wgFamilyId[1];
 }
 
 static hc_COLD void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen) {
@@ -328,7 +292,7 @@ static hc_COLD void config_setWgDevice(void) {
     CHECK(fd, RES > 0);
     CHECK(sys_read(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
     debug_CHECK(sys_close(fd), RES == 0);
-    netlink_talk(config.genetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+    genetlink_talk(&(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 }
 
 static hc_COLD void config_printWgPublicKey(void) {
@@ -355,18 +319,10 @@ static hc_COLD void config_printWgPublicKey(void) {
         },
         .ifIndex = config_WG_IF_INDEX
     };
-    netlink_talk(config.genetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+    genetlink_talk(&(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
 
-    // Iterate over all attributes, assume WGDEVICE_A_PUBLIC_KEY is one of them.
-    for (
-        struct nlattr *attr = (void *)&buffer[sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)];;
-        attr = (void *)attr + math_ALIGN_FORWARD(attr->nla_len, 4)
-    ) {
-        if (attr->nla_type == WGDEVICE_A_PUBLIC_KEY) {
-            hc_MEMCPY(config.wgPublicKey, (uint8_t *)&attr[1], 32);
-            break;
-        }
-    }
+    struct nlattr *wgPublicKey = genetlink_findAttr(WGDEVICE_A_PUBLIC_KEY);
+    hc_MEMCPY(config.wgPublicKey, (uint8_t *)&wgPublicKey[1], 32);
 
     uint8_t base64PublicKey[base64_ENCODE_SIZE(32)];
     base64_encode(&base64PublicKey[0], config.wgPublicKey, 32);
@@ -422,5 +378,4 @@ static hc_COLD void config_configure(void) {
 
 static hc_COLD void config_deinit(void) {
     debug_CHECK(sys_close(config.rtnetlinkFd), RES == 0);
-    debug_CHECK(sys_close(config.genetlinkFd), RES == 0);
 }
