@@ -1,17 +1,33 @@
-static void netlink_talk(int32_t fd, struct iovec *request, int32_t iovLen) {
-    memset(&buffer[0], 0xbb, sizeof(buffer));
-    struct sockaddr_nl addr = { .nl_family = AF_NETLINK };
-    struct msghdr msghdr = {
-        .msg_name = &addr,
-        .msg_namelen = sizeof(addr),
-        .msg_iov = &request[0],
-        .msg_iovlen = iovLen
-    };
-    int64_t sent = sys_sendmsg(fd, &msghdr, MSG_NOSIGNAL | MSG_DONTWAIT);
+static void netlink_receive(int32_t fd) {
+    // Receive full response into buffer.
+    int64_t recvOffset = 0;
+    for (;;) {
+        int64_t remainingBuffer = (int64_t)sizeof(buffer) - recvOffset;
+        CHECK(remainingBuffer, RES >= 8192); // Avoid truncations.
+        int64_t received = sys_recvfrom(fd, &buffer[recvOffset], remainingBuffer, MSG_DONTWAIT, NULL, NULL);
+        CHECK(received, RES > (int64_t)sizeof(struct nlmsghdr));
 
+        // Iterate all received messages.
+        void *end = (void *)&buffer[recvOffset + received];
+        for (struct nlmsghdr *respHdr = (void *)&buffer[recvOffset];;) {
+            if (respHdr->nlmsg_type == NLMSG_ERROR || respHdr->nlmsg_type == NLMSG_DONE) {
+                int32_t error = *(int32_t *)&respHdr[1];
+                CHECK(error, RES == 0);
+                return;
+            }
+            void *next = (void *)respHdr + math_ALIGN_FORWARD(respHdr->nlmsg_len, 4U);
+            if (next == end) return;
+            debug_ASSERT(next < end);
+            debug_ASSERT(respHdr->nlmsg_flags & NLM_F_MULTI);
+            respHdr = next;
+        }
+        recvOffset += received;
+    }
+}
+
+static void netlink_talk(int32_t fd, struct iovec *request, int32_t iovLen) {
     struct nlmsghdr *reqHdr = (void *)request[0].iov_base;
     debug_ASSERT(request[0].iov_len >= (int64_t)sizeof(*reqHdr));
-    CHECK(sent, RES == reqHdr->nlmsg_len);
 
 #ifndef debug_NDEBUG
     // Check that the header length matches the total iov length.
@@ -20,14 +36,17 @@ static void netlink_talk(int32_t fd, struct iovec *request, int32_t iovLen) {
     CHECK(reqHdr->nlmsg_len, RES == totalLen);
 #endif
 
-    int64_t received = sys_recvfrom(fd, &buffer[0], sizeof(buffer), MSG_DONTWAIT, NULL, NULL);
-    CHECK(received, RES > (int64_t)sizeof(struct nlmsghdr));
+    struct sockaddr_nl addr = { .nl_family = AF_NETLINK };
+    struct msghdr msghdr = {
+        .msg_name = &addr,
+        .msg_namelen = sizeof(addr),
+        .msg_iov = &request[0],
+        .msg_iovlen = iovLen
+    };
+    int64_t sent = sys_sendmsg(fd, &msghdr, MSG_NOSIGNAL | MSG_DONTWAIT);
+    CHECK(sent, RES == reqHdr->nlmsg_len);
 
-    struct nlmsghdr *respHdr = (void *)&buffer[0];
-    if (respHdr->nlmsg_type == NLMSG_ERROR) {
-        int32_t error = *(int32_t *)&buffer[sizeof(*respHdr)];
-        CHECK(error, RES == 0);
-    }
+    netlink_receive(fd);
 }
 
 static hc_NONULL struct nlattr *netlink_findAttr(struct nlattr *start, void *end, uint16_t attrType) {

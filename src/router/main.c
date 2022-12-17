@@ -27,6 +27,7 @@ static void epollAdd(int32_t epollFd, int32_t fd) {
 #include "dhcp.h"
 #include "netlink/netlink.c"
 #include "netlink/genetlink.c"
+#include "ksmb.c"
 #include "acpi.c"
 #include "config.c"
 #include "dhcpClient.c"
@@ -37,8 +38,11 @@ static void epollAdd(int32_t epollFd, int32_t fd) {
 
 int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     genetlink_init();
+
     acpi_init();
+    ksmb_init();
     config_init();
+
     config_configure();
 
     dhcpClient_init();
@@ -58,6 +62,7 @@ int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     int32_t epollFd = sys_epoll_create1(0);
     CHECK(epollFd, RES > 0);
     epollAdd(epollFd, acpi.netlinkFd);
+    epollAdd(epollFd, ksmb.netlinkFd);
     epollAdd(epollFd, dhcpClient.fd);
     epollAdd(epollFd, dhcpClient.timerFd);
     epollAdd(epollFd, dhcpServer.fd);
@@ -70,7 +75,8 @@ int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
         CHECK(sys_epoll_pwait(epollFd, &event, 1, -1, NULL), RES == 1);
         if (event.data.fd == acpi.netlinkFd) break;
 
-        if (event.data.fd == dhcpClient.fd) dhcpClient_onFd();
+        if (event.data.fd == ksmb.netlinkFd) ksmb_onNetlinkFd();
+        else if (event.data.fd == dhcpClient.fd) dhcpClient_onFd();
         else if (event.data.fd == dhcpClient.timerFd) dhcpClient_onTimerFd();
         else if (event.data.fd == dhcpServer.fd) dhcpServer_onFd(&dhcpServer);
         else if (event.data.fd == wanDumper.listenFd) packetDumper_onListenFd(&wanDumper, epollFd);
@@ -86,6 +92,7 @@ int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     dhcpServer_deinit(&dhcpServer);
     dhcpClient_deinit();
     config_deinit();
+    ksmb_deinit();
     acpi_deinit();
     genetlink_deinit();
     return 0;
