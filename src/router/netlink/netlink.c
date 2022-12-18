@@ -49,7 +49,7 @@ static void netlink_talk(int32_t fd, struct iovec *request, int32_t iovLen) {
     netlink_receive(fd);
 }
 
-static hc_NONULL struct nlattr *netlink_findAttr(struct nlattr *start, void *end, uint16_t attrType) {
+static hc_NONULL struct nlattr *netlink_findAttr(struct nlattr *start, const void *end, uint16_t attrType) {
     for (;;) {
         void *next = (void *)start + math_ALIGN_FORWARD(start->nla_len, 4);
         CHECK(next, RES <= end);

@@ -82,7 +82,9 @@ static void packetDumper_onPacketFd(struct packetDumper *self) {
         struct cmsghdr cmsghdr;
         struct timespec ts[3];
     } cmsg;
+#ifndef debug_NDEBUG
     cmsg.cmsghdr.cmsg_type = 0;
+#endif
     struct msghdr recvMsghdr = {
         .msg_iov = &(struct iovec) { .iov_base = &buffer[0], .iov_len = sizeof(buffer) },
         .msg_iovlen = 1,
@@ -93,7 +95,6 @@ static void packetDumper_onPacketFd(struct packetDumper *self) {
     int64_t read = sys_recvmsg(self->packetFd, &recvMsghdr, 0);
     CHECK(read, RES > 0);
     debug_ASSERT(cmsg.cmsghdr.cmsg_type == SO_TIMESTAMPING);
-    if (cmsg.cmsghdr.cmsg_type == 0) return; // Make clang-analyzer happy.
     debug_ASSERT(cmsg.cmsghdr.cmsg_len == sizeof(cmsg));
 
     struct {
