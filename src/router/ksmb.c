@@ -24,7 +24,6 @@ static hc_COLD void ksmb_init(void) {
             .nlmsg_len = sizeof(startupRequest),
             .nlmsg_type = ksmb.familyId,
             .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
-            .nlmsg_pid = (uint32_t)sys_getpid() // TODO: needed?
         },
         .genHdr = {
             .cmd = KSMBD_EVENT_STARTING_UP,
@@ -79,7 +78,6 @@ static void ksmb_onNetlinkFd(void) {
                     .nlmsg_len = sizeof(loginResponse),
                     .nlmsg_type = ksmb.familyId,
                     .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
-                    .nlmsg_pid = (uint32_t)sys_getpid() // TODO: needed?
                 },
                 .genHdr = {
                     .cmd = KSMBD_EVENT_LOGIN_RESPONSE,
@@ -119,7 +117,6 @@ static void ksmb_onNetlinkFd(void) {
                     .nlmsg_len = sizeof(treeResponse),
                     .nlmsg_type = ksmb.familyId,
                     .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
-                    .nlmsg_pid = (uint32_t)sys_getpid() // TODO: needed?
                 },
                 .genHdr = {
                     .cmd = KSMBD_EVENT_TREE_CONNECT_RESPONSE,
@@ -151,7 +148,6 @@ static void ksmb_onNetlinkFd(void) {
                     .nlmsg_len = sizeof(shareResponse),
                     .nlmsg_type = ksmb.familyId,
                     .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
-                    .nlmsg_pid = (uint32_t)sys_getpid() // TODO: needed?
                 },
                 .genHdr = {
                     .cmd = KSMBD_EVENT_SHARE_CONFIG_RESPONSE,
