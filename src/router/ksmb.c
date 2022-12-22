@@ -62,8 +62,8 @@ static void ksmb_onNetlinkFd(void) {
     struct nlmsghdr *hdr = (void *)&buffer[0];
     struct genlmsghdr *genHdr = (void *)&hdr[1];
     struct nlattr *attr = (void *)&genHdr[1];
-    CHECK(attr->nla_type, RES == genHdr->cmd);
-    debug_printNum("Got: ", attr->nla_type, "\n");
+    debug_ASSERT(attr->nla_type == genHdr->cmd);
+
     switch (attr->nla_type) {
         case KSMBD_EVENT_LOGIN_REQUEST: {
             struct ksmbd_login_request *request = (void *)&attr[1];
@@ -142,7 +142,7 @@ static void ksmb_onNetlinkFd(void) {
                 struct genlmsghdr genHdr;
                 struct nlattr responseAttr;
                 struct ksmbd_share_config_response response;
-                char path[4];
+                char path[8];
             } shareResponse = {
                 .hdr = {
                     .nlmsg_len = sizeof(shareResponse),

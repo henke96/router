@@ -287,8 +287,8 @@ static hc_COLD void config_setWgDevice(void) {
         },
         .peer1AllowedIpNetmask = 32
     };
-    // Read private key from /wgkey.
-    int32_t fd = sys_openat(-1, "/mnt/wgkey", O_RDONLY, 0);
+    // Read private key.
+    int32_t fd = sys_openat(-1, "/mnt/config/wg/key", O_RDONLY, 0);
     CHECK(fd, RES > 0);
     CHECK(sys_read(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
     debug_CHECK(sys_close(fd), RES == 0);

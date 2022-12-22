@@ -35,8 +35,8 @@ dev=$(udisksctl loop-setup -f disk.img | sed -E 's/^Mapped file .+ as ([^.]+).*$
 mnt=$(udisksctl mount -b "$dev" | sed -E 's/^Mounted .+ at ([^.]+).*$/\1/')
 
 # Install kernel.
-mkdir -p "$mnt/EFI/BOOT"
-cp src/bootloader/bootloader.efi "$mnt/EFI/BOOT/BOOTX64.EFI"
+mkdir -p "$mnt/efi/boot"
+cp src/bootloader/bootloader.efi "$mnt/efi/boot/bootx64.efi"
 
 # Check if creating installer image or not.
 if test $# -ge 1; then
@@ -45,4 +45,5 @@ if test $# -ge 1; then
 fi
 
 # Generate a wireguard key. TODO: remove
-dd if=/dev/urandom of="$mnt/wgkey" bs=32 count=1
+mkdir -p "$mnt/config/wg"
+dd if=/dev/urandom of="$mnt/config/wg/key" bs=32 count=1
