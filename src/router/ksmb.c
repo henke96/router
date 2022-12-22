@@ -92,9 +92,9 @@ static void ksmb_onNetlinkFd(void) {
                     .gid = 0,
                     .uid = 0,
                     .account = {0},
-                    .status = KSMBD_USER_FLAG_OK,
+                    .status = KSMBD_USER_FLAG_OK | KSMBD_USER_FLAG_GUEST_ACCOUNT,
                     .hash_sz = 16,
-                    .hash = { 0x31, 0xd6, 0xcf, 0xe0, 0xd1, 0x6a, 0xe9, 0x31, 0xb7, 0x3c, 0x59, 0xd7, 0xe0, 0xc0, 0x89, 0xc0 } // Empty password.
+                    .hash = {0}
                 }
             };
             hc_MEMCPY(&loginResponse.response.account[0], &request->account[0], KSMBD_REQ_MAX_ACCOUNT_NAME_SZ);
@@ -105,7 +105,7 @@ static void ksmb_onNetlinkFd(void) {
             struct ksmbd_tree_connect_request *request = (void *)&attr[1];
 
             uint16_t status = KSMBD_TREE_CONN_STATUS_NO_SHARE;
-            if (util_cstrCmp(&request->share[0], "test") == 0) status = KSMBD_TREE_CONN_STATUS_OK;
+            if (util_cstrCmp(&request->share[0], "config") == 0) status = KSMBD_TREE_CONN_STATUS_OK;
 
             struct {
                 struct nlmsghdr hdr;
@@ -168,7 +168,7 @@ static void ksmb_onNetlinkFd(void) {
                     .force_gid = (uint16_t)-1,
                     .veto_list_sz = 0,
                 },
-                .path = "/"
+                .path = "/mnt"
             };
             netlink_talk(ksmb.netlinkFd, &(struct iovec) { .iov_base = &shareResponse, .iov_len = sizeof(shareResponse) }, 1);
             break;

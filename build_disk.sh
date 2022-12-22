@@ -42,7 +42,7 @@ cp src/bootloader/bootloader.efi "$mnt/EFI/BOOT/BOOTX64.EFI"
 if test $# -ge 1; then
     # Yes, create install file.
     echo -n "$1" > "$mnt/install"
-else
-    # No, generate a wireguard key.
-    dd if=/dev/urandom of="$mnt/wgkey" bs=32 count=1
 fi
+
+# Generate a wireguard key. TODO: remove
+dd if=/dev/urandom of="$mnt/wgkey" bs=32 count=1

@@ -156,15 +156,6 @@ static int32_t handleInstallation(void) {
     // Remove installation file.
     if (sys_unlinkat(-1, "/mnt/install", 0) != 0) return -15;
 
-    // Generate wireguard key file if it doesn't exist.
-    if (sys_faccessat(-1, "/mnt/wgkey", 0) != 0) {
-        uint8_t key[32];
-        if (sys_getrandom(&key, sizeof(key), 0) != sizeof(key)) return -16;
-        int32_t keyFd = sys_openat(-1, "/mnt/wgkey", O_WRONLY | O_CREAT | O_EXCL, S_IRUSR);
-        if (keyFd < 0) return -17;
-        if (sys_write(keyFd, &key[0], sizeof(key)) != sizeof(key)) return -18;
-        if (sys_close(keyFd) != 0) return -19;
-    }
     return 1; // Success!
 }
 

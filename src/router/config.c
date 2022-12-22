@@ -326,11 +326,12 @@ static hc_COLD void config_printWgPublicKey(void) {
 
     uint8_t base64PublicKey[base64_ENCODE_SIZE(32)];
     base64_encode(&base64PublicKey[0], config.wgPublicKey, 32);
-    int64_t written = sys_writev(STDOUT_FILENO, (struct iovec[3]) {
+    struct iovec iov[] = {
         { .iov_base = "Wireguard PK: ", .iov_len = 14 },
         { .iov_base = &base64PublicKey[0], .iov_len = sizeof(base64PublicKey) },
         { .iov_base = "\n", .iov_len = 1 }
-    }, 3);
+    };
+    int64_t written = sys_writev(STDOUT_FILENO, &iov[0], hc_ARRAY_LEN(iov));
     CHECK(written, RES == 14 + sizeof(base64PublicKey) + 1);
 }
 
