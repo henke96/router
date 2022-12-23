@@ -32,7 +32,7 @@ mkfs.fat -F 12 -i 0 -n ROUTER disk.img
 dev=$(udisksctl loop-setup -f disk.img | sed -E 's/^Mapped file .+ as ([^.]+).*$/\1/')
 
 # Mount disk.
-mnt=$(udisksctl mount -b "$dev" | sed -E 's/^Mounted .+ at ([^.]+).*$/\1/')
+mnt=$(udisksctl mount -b "$dev" 2>&1 | sed -E 's/^Mounted .+ at ([^.]+).*$/\1/' | sed -E 's/.+ already mounted at `(.+)'\''.*$/\1/')
 
 # Install kernel.
 mkdir -p "$mnt/efi/boot"
