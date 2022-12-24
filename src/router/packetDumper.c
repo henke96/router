@@ -109,12 +109,13 @@ static void packetDumper_onPacketFd(struct packetDumper *self) {
         .originalLength = (uint32_t)read
     };
 
+    struct iovec iov[] = {
+        { .iov_base = &pcapPacketRecord, .iov_len = sizeof(pcapPacketRecord) },
+        { .iov_base = &buffer[0], .iov_len = read }
+    };
     struct msghdr sendMsghdr = {
-        .msg_iov = &(struct iovec[]) {
-            { .iov_base = &pcapPacketRecord, .iov_len = sizeof(pcapPacketRecord) },
-            { .iov_base = &buffer[0], .iov_len = read }
-        }[0],
-        .msg_iovlen = 2
+        .msg_iov = &iov[0],
+        .msg_iovlen = hc_ARRAY_LEN(iov)
     };
     int64_t written = sys_sendmsg(self->clientFd, &sendMsghdr, MSG_NOSIGNAL);
     if (written != (int64_t)sizeof(pcapPacketRecord) + read) packetDumper_stop(self);

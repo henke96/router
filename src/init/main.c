@@ -219,7 +219,7 @@ int32_t main(int32_t argc, char **argv) {
         char *pidStr = util_intToStr(&buffer[PID_END], pid);
         char *statusStr = util_intToStr(&buffer[STATUS_END], status);
         char *maxRssStr = util_intToStr(&buffer[MAXRSS_END], rusage.ru_maxrss);
-        sys_writev(STDOUT_FILENO, (struct iovec[7]) {
+        struct iovec iov[] = {
             { .iov_base = "Pid ", .iov_len = 4 },
             { .iov_base = pidStr, .iov_len = (int64_t)(&buffer[PID_END] - pidStr) },
             { .iov_base = " exited (status=", .iov_len = 16 },
@@ -227,7 +227,8 @@ int32_t main(int32_t argc, char **argv) {
             { .iov_base = ", maxRss=", .iov_len = 9 },
             { .iov_base = maxRssStr, .iov_len = (int64_t)(&buffer[MAXRSS_END] - maxRssStr) },
             { .iov_base = ")\n", .iov_len = 2 }
-        }, 7);
+        };
+        sys_writev(STDOUT_FILENO, &iov[0], hc_ARRAY_LEN(iov));
 
         // Currently we only have the router process, so shutdown if it exits.
         if (status == 0) cleanExit = true;

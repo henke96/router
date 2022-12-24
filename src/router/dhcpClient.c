@@ -287,11 +287,12 @@ static void dhcpClient_onFd(void) {
                 *--pos = '.';
                 pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[0]);
 
-                sys_writev(STDOUT_FILENO, (struct iovec[3]) {
+                struct iovec iov[] = {
                     { .iov_base = "New IP leased: ", .iov_len = 15 },
                     { .iov_base = pos, .iov_len = (int64_t)(&printBuffer[18] - pos) },
                     { .iov_base = "\n", .iov_len = 1 }
-                }, 3);
+                };
+                sys_writev(STDOUT_FILENO, &iov[0], hc_ARRAY_LEN(iov));
             }
 
             // Add the address.

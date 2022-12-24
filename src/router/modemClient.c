@@ -59,19 +59,21 @@ static hc_COLD int32_t modemClient_processQueue(struct modemClient *self) {
             break;
         }
         case modemClient_cmd_START_SMS: {
-            int64_t written = sys_writev(self->fd, (struct iovec[3]) {
+            struct iovec iov[] = {
                 { .iov_base = "AT+CMGS=\"", .iov_len = 9 },
                 { .iov_base = &cmd->data[0], .iov_len = cmd->dataSize },
                 { .iov_base = "\"\r", .iov_len = 2 }
-            }, 3);
+            };
+            int64_t written = sys_writev(self->fd, &iov[0], hc_ARRAY_LEN(iov));
             if (written != 9 + cmd->dataSize + 2) return -1;
             break;
         }
         case modemClient_cmd_SEND_SMS: {
-            int64_t written = sys_writev(self->fd, (struct iovec[2]) {
+            struct iovec iov[] = {
                 { .iov_base = &cmd->data[0], .iov_len = cmd->dataSize },
                 { .iov_base = "\x1a", .iov_len = 1 }
-            }, 2);
+            };
+            int64_t written = sys_writev(self->fd, &iov[0], hc_ARRAY_LEN(iov));
             if (written != cmd->dataSize + 1) return -1;
             break;
         }
