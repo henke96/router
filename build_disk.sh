@@ -12,6 +12,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Can be `debug` or `release`.
+export BUILD_TYPE="${BUILD_TYPE:-debug}"
+
 # Build everything for initramfs.
 src/init/build.sh
 src/router/build.sh
@@ -34,7 +37,7 @@ dev=$(udisksctl loop-setup -f disk.img | sed -E 's/^Mapped file .+ as ([^.]+).*$
 # Mount disk.
 mnt=$(udisksctl mount -b "$dev" 2>&1 | sed -E 's/^Mounted .+ at ([^.]+).*$/\1/' | sed -E 's/.+ already mounted at `(.+)'\''.*$/\1/')
 
-# Install kernel.
+# Install OS.
 mkdir -p "$mnt/efi/boot"
 cp src/bootloader/bootloader.efi "$mnt/efi/boot/bootx64.efi"
 
