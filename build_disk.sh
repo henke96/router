@@ -20,7 +20,19 @@ src/init/build.sh
 src/router/build.sh
 
 # Build Linux.
-(cd linux/linux* && KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64 LLVM=${LLVM:-1} make -j$NUMCPUS)
+(
+    for dir in linux/linux*; do
+        case "$dir" in
+            linux/linux-firmware*) continue;;
+            linux/linux.config) continue;;
+            *)
+                cd "$dir"
+                export LINUX_FIRMWARE=$(echo ../linux-firmware*) # For initramfs building.
+                KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64 LLVM=${LLVM:-1} make -j$NUMCPUS
+                break;;
+        esac
+    done
+)
 
 # Build bootloader.
 src/bootloader/build.sh
