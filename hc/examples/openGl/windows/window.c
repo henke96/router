@@ -77,6 +77,13 @@ static int64_t window_proc(
                 goto cleanup_context;
             }
             window.initialised = true;
+
+            // Force a WM_NCCALCSIZE message to remove window decorations.
+            SetWindowPos(
+                windowHandle, NULL,
+                0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED
+            );
             return 0;
 
             cleanup_context:
@@ -84,7 +91,7 @@ static int64_t window_proc(
             cleanup_dc:
             debug_CHECK(ReleaseDC(windowHandle, window.dc), RES == 1);
             return -1;
-        };
+        }
         case WM_DESTROY: {
             // Windows calls this even if WM_CREATE failed..
             if (window.initialised) {
@@ -93,6 +100,11 @@ static int64_t window_proc(
                 debug_CHECK(ReleaseDC(windowHandle, window.dc), RES == 1);
                 PostQuitMessage(0);
             }
+            return 0;
+        }
+        case WM_NCCALCSIZE: {
+            if (!wParam) return DefWindowProcW(windowHandle, message, wParam, lParam);
+            // Handle this to prevent window decorations.
             return 0;
         }
         case WM_SIZE: {
@@ -203,7 +215,7 @@ static int32_t window_init(void) {
     int32_t status;
     struct WNDCLASSW windowClass = {
         .instanceHandle = __ImageBase,
-        .className = u"gl",
+        .className = L"gl",
         .windowProc = window_proc,
         .style = CS_OWNDC | CS_VREDRAW | CS_HREDRAW,
         .cursorHandle = LoadCursorW(NULL, IDC_ARROW)
@@ -216,7 +228,7 @@ static int32_t window_init(void) {
     window.windowHandle = CreateWindowExW(
         0,
         windowClass.className,
-        u"",
+        L"",
         WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT, window_DEFAULT_WIDTH, window_DEFAULT_HEIGHT,
         NULL,
@@ -277,6 +289,6 @@ static void window_run(void) {
 }
 
 static void window_deinit(void) {
-    debug_CHECK(UnregisterClassW(u"gl", __ImageBase), RES == 1);
+    debug_CHECK(UnregisterClassW(L"gl", __ImageBase), RES == 1);
     wgl_deinit(&window.wgl);
 }

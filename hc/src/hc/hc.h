@@ -6,9 +6,8 @@ _Static_assert(sizeof(short) == 2, "short not 2 bytes");
 _Static_assert(sizeof(void *) == 4 || sizeof(void *) == 8, "void * not 4 or 8 bytes");
 _Static_assert(-1 == ~0, "not two's complement");
 _Static_assert((-1 >> 1) == -1, "not arithmetic shift right");
-_Static_assert(sizeof(u""[0]) == 2, "u string literal not 2 bytes");
+_Static_assert(sizeof(L""[0]) == 2, "L string literal not 2 bytes");
 _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
-// Don't use `long` or `L""` types, they differ between targets.
 
 #if defined(__x86_64__)
     #define hc_X86_64 1
@@ -22,10 +21,16 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
     #error "Unsupported architecture"
 #endif
 
+#if defined(_WIN32)
+    #define hc_PE 1
+#elif defined(__linux__)
+    #define hc_ELF 1
+#endif
+
 // Are size_t, int, long and pointer types 32 bit?
 #if defined(__ILP32__)
     #define hc_ILP32 1
-    #define hc_ILP32_PAD(NAME) int32_t NAME 
+    #define hc_ILP32_PAD(NAME) int32_t NAME;
 #else
     #define hc_ILP32 0
     #define hc_ILP32_PAD(NAME)
@@ -38,18 +43,19 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
 #define hc_STR_COMMA_LEN(STR) (STR), (hc_ARRAY_LEN(STR) - 1)
 
 // Attributes
+#define hc_WEAK __attribute__((weak))
+#define hc_FALLTHROUGH __attribute__((fallthrough))
 #define hc_UNREACHABLE __builtin_unreachable()
 #define hc_ASSUME __builtin_assume
+#define hc_ASSUME_ALIGNED __builtin_assume_aligned
 #define hc_NONULL __attribute__((nonnull))
 #define hc_UNUSED __attribute__((unused))
-#define hc_PACKED __attribute__((packed))
+#define hc_PACKED(N) __attribute__((packed, aligned(N)))
 #define hc_FALLTHROUGH __attribute__((fallthrough))
 #define hc_ALIGNED(N) __attribute__((aligned(N)))
 #define hc_SECTION(NAME) __attribute__((section(NAME)))
 #define hc_ALWAYS_INLINE __attribute__((always_inline)) inline
 #define hc_COLD __attribute__((cold))
-#define hc_DLLIMPORT __attribute__((dllimport))
-#define hc_DLLEXPORT __attribute__((dllexport))
 #if hc_X86_64
     #define hc_MS_ABI __attribute__((ms_abi))
     #define hc_SYSV_ABI __attribute__((sysv_abi))
@@ -57,15 +63,12 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
     #define hc_MS_ABI
     #define hc_SYSV_ABI
 #endif
-#if hc_WASM32
-    #define hc_WASM_IMPORT(MODULE, NAME) __attribute__((import_module(MODULE), import_name(NAME)))
-    #define hc_WASM_EXPORT(NAME) __attribute__((export_name(NAME)))
-    #define hc_WASM_MEMORY_SIZE __builtin_wasm_memory_size(0)
-    #define hc_WASM_MEMORY_GROW(DELTA) __builtin_wasm_memory_grow(0, DELTA)
-#else
-    #define hc_WASM_IMPORT(MODULE, NAME)
-    #define hc_WASM_EXPORT(NAME)
-#endif
+
+#define hc_DLLIMPORT __attribute__((dllimport))
+#define hc_DLLEXPORT __attribute__((dllexport))
+#define hc_ELF_EXPORT __attribute__((visibility("default")))
+#define hc_WASM_IMPORT(MODULE, NAME) __attribute__((import_module(MODULE), import_name(NAME)))
+#define hc_WASM_EXPORT(NAME) __attribute__((export_name(NAME)))
 
 // Builtins
 #define hc_ABS32 __builtin_abs
@@ -79,6 +82,8 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
 #define hc_MEMMOVE __builtin_memmove
 #define hc_MEMCMP __builtin_memcmp
 #define hc_MEMSET __builtin_memset
+#define hc_WASM_MEMORY_SIZE __builtin_wasm_memory_size(0)
+#define hc_WASM_MEMORY_GROW(DELTA) __builtin_wasm_memory_grow(0, DELTA)
 
 // Atomics
 #define hc_ATOMIC_RELAXED __ATOMIC_RELAXED
@@ -156,3 +161,9 @@ typedef long long int64_t;
 #define alignof _Alignof
 #define thread_local _Thread_local
 #define offsetof __builtin_offsetof
+
+typedef __builtin_va_list va_list;
+#define va_start(ap, param) __builtin_va_start(ap, param)
+#define va_end(ap) __builtin_va_end(ap)
+#define va_arg(ap, type) __builtin_va_arg(ap, type)
+#define va_copy(dest, src) __builtin_va_copy(dest, src)
