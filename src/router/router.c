@@ -36,7 +36,7 @@ static void epollAdd(int32_t epollFd, int32_t fd) {
 #include "packetDumper.c"
 #include "modemClient.c"
 
-int32_t main(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
+int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     genetlink_init();
 
     acpi_init();

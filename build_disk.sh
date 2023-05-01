@@ -28,6 +28,9 @@ src/router/build.sh
             *)
                 cd "$dir"
                 export LINUX_FIRMWARE=$(echo ../linux-firmware*) # For initramfs building.
+                if test "$BUILD_TYPE" = "debug"; then
+                    export DEBUG_PREFIX="debug."
+                fi
                 KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64 LLVM=${LLVM:-1} make -j$NUMCPUS
                 break;;
         esac

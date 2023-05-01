@@ -159,7 +159,7 @@ static int32_t handleInstallation(void) {
     return 1; // Success!
 }
 
-int32_t main(int32_t argc, char **argv) {
+int32_t start(int32_t argc, char **argv) {
     bool cleanExit = false;
     int32_t status = initialise();
     if (status < 0) {

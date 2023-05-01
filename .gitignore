@@ -1,3 +1,5 @@
-*.bin*
-*.efi*
+*.elf
+*.elf.s
+*.efi
+*.efi.s
 *.img

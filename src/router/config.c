@@ -16,7 +16,7 @@ struct config {
     int32_t rtnetlinkFd;
     uint16_t wgFamilyId;
     uint16_t __pad;
-    uint8_t wgPublicKey[32]; // Populated by config_configure().
+    char wgPublicKey[32]; // Populated by config_configure().
 };
 
 static struct config config;
@@ -324,7 +324,7 @@ static hc_COLD void config_printWgPublicKey(void) {
     struct nlattr *wgPublicKey = genetlink_findAttr(WGDEVICE_A_PUBLIC_KEY);
     hc_MEMCPY(config.wgPublicKey, (uint8_t *)&wgPublicKey[1], 32);
 
-    uint8_t base64PublicKey[base64_ENCODE_SIZE(32)];
+    char base64PublicKey[base64_ENCODE_SIZE(32)];
     base64_encode(&base64PublicKey[0], config.wgPublicKey, 32);
     struct iovec iov[] = {
         { .iov_base = "Wireguard PK: ", .iov_len = 14 },

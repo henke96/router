@@ -1,6 +1,7 @@
 #!/bin/sh
-script_dir="$(dirname $0)"
-linux_out=$(echo $script_dir/../../linux/linux*/arch/x86/boot)
-flags="-Wl,-subsystem,efi_application -I$linux_out -Os -s"
-"$script_dir/../../hc/cc_pe.sh" $flags -S -o "$script_dir/bootloader.efi.s" "$script_dir/main.c"
-"$script_dir/../../hc/cc_pe.sh" $flags -o "$script_dir/bootloader.efi" "$script_dir/main.c"
+set -e
+script_dir="$(dirname "$0")"
+root_dir="$script_dir/../.."
+linux_out=$(echo $root_dir/linux/linux*/arch/x86/boot)
+
+FLAGS="-I$linux_out -Os" "$root_dir/hc/tools/build/efi.sh" "$script_dir" bootloader
