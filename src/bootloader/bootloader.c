@@ -4,7 +4,7 @@
 #include "hc/libc/small.c"
 #include "linuxBin.c"
 
-static uint16_t linuxCmdLine[] = u"         mitigations=off video=efifb:width:800,height:480";
+static uint16_t linuxCmdLine[] = L"         mitigations=off video=efifb:width:800,height:480";
 
 int64_t _start(void *imageHandle, struct efi_systemTable *systemTable) {
     // Read fat volume id.

@@ -109,11 +109,11 @@ static void packetDumper_onPacketFd(struct packetDumper *self) {
         .originalLength = (uint32_t)read
     };
 
-    struct iovec iov[] = {
+    struct iovec_const iov[] = {
         { .iov_base = &pcapPacketRecord, .iov_len = sizeof(pcapPacketRecord) },
         { .iov_base = &buffer[0], .iov_len = read }
     };
-    struct msghdr sendMsghdr = {
+    struct msghdr_const sendMsghdr = {
         .msg_iov = &iov[0],
         .msg_iovlen = hc_ARRAY_LEN(iov)
     };

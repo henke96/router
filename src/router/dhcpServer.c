@@ -20,26 +20,23 @@ struct dhcpServer {
 // Updates or creates entry for mac address, and returns index to it.
 // If `allowCreate` is false and the entry doesn't exist, -1 is returned.
 static int32_t dhcpServer_getEntry(struct dhcpServer *self, uint8_t *macAddr, bool allowCreate) {
-    int32_t oldestIndex;
-    int64_t oldestTimeSec = INT64_MAX;
-
     struct timespec currentTime = {0};
     debug_CHECK(sys_clock_gettime(CLOCK_MONOTONIC, &currentTime), RES == 0);
 
-    int32_t i = dhcpServer_NUM_ENTRIES;
-    do {
-        --i;
-        if (self->entries[i].timeSec == 0) {
-            oldestIndex = i;
-            oldestTimeSec = 0;
-        } else if (hc_MEMCMP(&macAddr[0], &self->entries[i].macAddr[0], 6) == 0) {
+    int32_t i = 0;
+    int32_t oldestIndex = i;
+    int64_t oldestTimeSec = self->entries[i].timeSec;
+    for (;;) {
+        if (hc_MEMCMP(&macAddr[0], &self->entries[i].macAddr[0], 6) == 0) {
             self->entries[i].timeSec = currentTime.tv_sec;
             return i;
-        } else if (self->entries[i].timeSec < oldestTimeSec) {
+        }
+        if (++i == dhcpServer_NUM_ENTRIES) break;
+        if (self->entries[i].timeSec < oldestTimeSec) {
             oldestIndex = i;
             oldestTimeSec = self->entries[i].timeSec;
         }
-    } while (i);
+    }
 
     if (!allowCreate) return -1;
 

@@ -15,7 +15,7 @@ static void netlink_receive(int32_t fd) {
                 CHECK(error, RES == 0);
                 return;
             }
-            void *next = (void *)respHdr + math_ALIGN_FORWARD(respHdr->nlmsg_len, 4U);
+            void *next = (void *)respHdr + math_ALIGN_FORWARD(respHdr->nlmsg_len, (uint32_t)4);
             if (next == end) return;
             debug_ASSERT(next < end);
             debug_ASSERT(respHdr->nlmsg_flags & NLM_F_MULTI);
@@ -25,8 +25,8 @@ static void netlink_receive(int32_t fd) {
     }
 }
 
-static void netlink_talk(int32_t fd, struct iovec *request, int32_t iovLen) {
-    struct nlmsghdr *reqHdr = (void *)request[0].iov_base;
+static void netlink_talk(int32_t fd, struct iovec_const *request, int32_t iovLen) {
+    const struct nlmsghdr *reqHdr = (const void *)request[0].iov_base;
     debug_ASSERT(request[0].iov_len >= (int64_t)sizeof(*reqHdr));
 
 #ifndef debug_NDEBUG
@@ -37,7 +37,7 @@ static void netlink_talk(int32_t fd, struct iovec *request, int32_t iovLen) {
 #endif
 
     struct sockaddr_nl addr = { .nl_family = AF_NETLINK };
-    struct msghdr msghdr = {
+    struct msghdr_const msghdr = {
         .msg_name = &addr,
         .msg_namelen = sizeof(addr),
         .msg_iov = &request[0],

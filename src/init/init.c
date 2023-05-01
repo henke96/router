@@ -26,7 +26,7 @@ static int32_t initialise(void) {
     // Panic if we run out of memory anyway.
     fd = sys_openat(-1, "/proc/sys/vm/panic_on_oom", O_WRONLY, 0);
     if (fd < 0) return -5;
-    num = sys_write(fd, "2", 1);
+    num = sys_write(fd, hc_STR_COMMA_LEN("2"));
     if (sys_close(fd) != 0) return -6;
     if (num != 1) return -7;
 
@@ -41,7 +41,7 @@ static int32_t iterateDevices(int32_t majorDev, uint32_t minorDev) {
     int32_t devFd = sys_openat(-1, "/dev", O_RDONLY, 0);
     if (devFd < 0) return -1;
 
-    if (majorDev < 0) sys_write(STDOUT_FILENO, "Block devices:", 14);
+    if (majorDev < 0) sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Block devices:"));
 
     for (;;) {
         int64_t read = sys_getdents64(devFd, &buffer[0], 3072); // Leave 1024 bytes at the end.
@@ -64,10 +64,10 @@ static int32_t iterateDevices(int32_t majorDev, uint32_t minorDev) {
 
             // Check if it's a block device.
             hc_MEMMOVE(&buffer2[17], &current->d_name[0], (uint64_t)nameLen + 1);
-            hc_MEMCPY(&buffer2[0], "/sys/class/block/", 17);
+            hc_MEMCPY(&buffer2[0], hc_STR_COMMA_LEN("/sys/class/block/"));
             if (sys_faccessat(-1, &buffer2[0], 0) != 0) continue;
 
-            hc_MEMCPY(&buffer2[10], "  /dev", 6); // The slash ends up at `buffer_DEVNAME_OFFSET` (3072 + 10 + 2).
+            hc_MEMCPY(&buffer2[10], hc_STR_COMMA_LEN("  /dev")); // The slash ends up at `buffer_DEVNAME_OFFSET` (3072 + 10 + 2).
 
             if (majorDev < 0) { // Only print.
                 sys_write(STDOUT_FILENO, &buffer2[10], 6 + 1 + nameLen);
@@ -84,7 +84,7 @@ static int32_t iterateDevices(int32_t majorDev, uint32_t minorDev) {
 
             if (*(uint16_t *)&fatBuffer[0] != majorDev) continue; // Check major device id.
             if (*(uint16_t *)&fatBuffer[2] != minorDev) continue; // Check minor device id.
-            if (hc_MEMCMP(&fatBuffer[4], "ROUTER", 6) != 0) continue; // Check label.
+            if (hc_MEMCMP(&fatBuffer[4], hc_STR_COMMA_LEN("ROUTER")) != 0) continue; // Check label.
 
             if (sys_close(devFd) != 0) return -7;
             return 0; // Found.
@@ -110,7 +110,7 @@ static int32_t handleInstallation(void) {
     int64_t numRead = sys_read(installFd, &buffer[buffer_DEVNAME_OFFSET], sizeof(buffer) - buffer_DEVNAME_OFFSET - 1);
     while (numRead <= 1) {
         if (iterateDevices(-1, 0) < 0) return -3;
-        sys_write(STDOUT_FILENO, "\nInstall on: ", 13);
+        sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("\nInstall on: "));
         numRead = sys_read(STDIN_FILENO, &buffer[buffer_DEVNAME_OFFSET], sizeof(buffer) - buffer_DEVNAME_OFFSET - 1);
         if (numRead < 0) return -4;
     }
@@ -201,7 +201,7 @@ int32_t start(int32_t argc, char **argv) {
     status = sys_clone3(&args);
     if (status == 0) {
         const char *newArgv[] = { "/router", NULL };
-        sys_execveat(-1, newArgv[0], &newArgv[0], (const char **)util_getEnvp(argc, argv), 0);
+        sys_execveat(-1, newArgv[0], &newArgv[0], (const char *const *)util_getEnvp(argc, argv), 0);
         return 1; // Let _start exit the child.
     }
     if (status < 0) goto halt_umount;
@@ -219,14 +219,14 @@ int32_t start(int32_t argc, char **argv) {
         char *pidStr = util_intToStr(&buffer[PID_END], pid);
         char *statusStr = util_intToStr(&buffer[STATUS_END], status);
         char *maxRssStr = util_intToStr(&buffer[MAXRSS_END], rusage.ru_maxrss);
-        struct iovec iov[] = {
-            { .iov_base = "Pid ", .iov_len = 4 },
-            { .iov_base = pidStr, .iov_len = (int64_t)(&buffer[PID_END] - pidStr) },
-            { .iov_base = " exited (status=", .iov_len = 16 },
-            { .iov_base = statusStr, .iov_len = (int64_t)(&buffer[STATUS_END] - statusStr) },
-            { .iov_base = ", maxRss=", .iov_len = 9 },
-            { .iov_base = maxRssStr, .iov_len = (int64_t)(&buffer[MAXRSS_END] - maxRssStr) },
-            { .iov_base = ")\n", .iov_len = 2 }
+        struct iovec_const iov[] = {
+            { hc_STR_COMMA_LEN("Pid ") },
+            { pidStr, (int64_t)(&buffer[PID_END] - pidStr) },
+            { hc_STR_COMMA_LEN(" exited (status=") },
+            { statusStr, (int64_t)(&buffer[STATUS_END] - statusStr) },
+            { hc_STR_COMMA_LEN(", maxRss=") },
+            { maxRssStr, (int64_t)(&buffer[MAXRSS_END] - maxRssStr) },
+            { hc_STR_COMMA_LEN(")\n") }
         };
         sys_writev(STDOUT_FILENO, &iov[0], hc_ARRAY_LEN(iov));
 
@@ -237,7 +237,7 @@ int32_t start(int32_t argc, char **argv) {
 
     halt_umount:
     if (sys_umount2("/mnt", 0) < 0) {
-        sys_write(STDOUT_FILENO, "Failed to umount /mnt\n", 22);
+        sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Failed to umount /mnt\n"));
         cleanExit = false;
     }
     halt:

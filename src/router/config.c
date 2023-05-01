@@ -25,7 +25,7 @@ static hc_COLD void config_init(void) {
     config.rtnetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
     CHECK(config.rtnetlinkFd, RES > 0);
 
-    genetlink_requestFamily(WG_GENL_NAME);
+    genetlink_requestFamily(hc_STR_COMMA_LEN(WG_GENL_NAME));
     struct nlattr *wgFamilyId = genetlink_findAttr(CTRL_ATTR_FAMILY_ID);
     config.wgFamilyId = *(uint16_t *)&wgFamilyId[1];
 }
@@ -54,7 +54,8 @@ static hc_COLD void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t pr
         }
     };
     hc_MEMCPY(&request.address, address, sizeof(request.address));
-    netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+    struct iovec_const iov[] = { { &request, sizeof(request) } };
+    netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
 static hc_COLD void config_setFlags(int32_t ifIndex, uint32_t flags, uint32_t flagsMask) {
@@ -76,7 +77,8 @@ static hc_COLD void config_setFlags(int32_t ifIndex, uint32_t flags, uint32_t fl
             .ifi_change = flagsMask
         }
     };
-    netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+    struct iovec_const iov[] = { { &request, sizeof(request) } };
+    netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
 static hc_COLD void config_setMaster(int32_t ifIndex, int32_t masterIfIndex, uint32_t flags, uint32_t flagsMask) {
@@ -105,7 +107,8 @@ static hc_COLD void config_setMaster(int32_t ifIndex, int32_t masterIfIndex, uin
         },
         .master = masterIfIndex
     };
-    netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+    struct iovec_const iov[] = { { &request, sizeof(request) } };
+    netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
 static hc_COLD void config_addWgPeer1Route(void) {
@@ -145,7 +148,8 @@ static hc_COLD void config_addWgPeer1Route(void) {
         },
         .outIfIndex = config_WG_IF_INDEX
     };
-    netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+    struct iovec_const iov[] = { { &request, sizeof(request) } };
+    netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
 // Name/type sizes must be multiples of 4 (pad strings with zeroes).
@@ -189,13 +193,13 @@ static hc_COLD void config_addIf(int32_t ifIndex, char *ifName, uint32_t ifNameS
             .nla_type = IFLA_IFNAME
         }
     };
-    struct iovec iov[4] = {
-        { .iov_base = &baseRequest, .iov_len = sizeof(baseRequest) },
-        { .iov_base = &ifName[0],   .iov_len = ifNameSize },
-        { .iov_base = &linkInfoHdr, .iov_len = sizeof(linkInfoHdr) },
-        { .iov_base = &ifType[0],   .iov_len = ifTypeSize }
+    struct iovec_const iov[] = {
+        { &baseRequest, sizeof(baseRequest) },
+        { &ifName[0],   ifNameSize },
+        { &linkInfoHdr, sizeof(linkInfoHdr) },
+        { &ifType[0],   ifTypeSize }
     };
-    netlink_talk(config.rtnetlinkFd, &iov[0], 4);
+    netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
 static hc_COLD void config_setWgDevice(void) {
@@ -292,7 +296,8 @@ static hc_COLD void config_setWgDevice(void) {
     CHECK(fd, RES > 0);
     CHECK(sys_read(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
     debug_CHECK(sys_close(fd), RES == 0);
-    genetlink_talk(&(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+    struct iovec_const iov[] = { { &request, sizeof(request) } };
+    genetlink_talk(&iov[0], hc_ARRAY_LEN(iov));
 }
 
 static hc_COLD void config_printWgPublicKey(void) {
@@ -319,27 +324,29 @@ static hc_COLD void config_printWgPublicKey(void) {
         },
         .ifIndex = config_WG_IF_INDEX
     };
-    genetlink_talk(&(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+    struct iovec_const iov[] = { { &request, sizeof(request) } };
+    genetlink_talk(&iov[0], hc_ARRAY_LEN(iov));
 
     struct nlattr *wgPublicKey = genetlink_findAttr(WGDEVICE_A_PUBLIC_KEY);
     hc_MEMCPY(config.wgPublicKey, (uint8_t *)&wgPublicKey[1], 32);
 
     char base64PublicKey[base64_ENCODE_SIZE(32)];
     base64_encode(&base64PublicKey[0], config.wgPublicKey, 32);
-    struct iovec iov[] = {
-        { .iov_base = "Wireguard PK: ", .iov_len = 14 },
-        { .iov_base = &base64PublicKey[0], .iov_len = sizeof(base64PublicKey) },
-        { .iov_base = "\n", .iov_len = 1 }
+    #define config_PRINT_WG_PK_STR "Wireguard PK: "
+    struct iovec_const print[] = {
+        { hc_STR_COMMA_LEN(config_PRINT_WG_PK_STR) },
+        { &base64PublicKey[0], sizeof(base64PublicKey) },
+        { hc_STR_COMMA_LEN("\n") }
     };
-    int64_t written = sys_writev(STDOUT_FILENO, &iov[0], hc_ARRAY_LEN(iov));
-    CHECK(written, RES == 14 + sizeof(base64PublicKey) + 1);
+    int64_t written = sys_writev(STDOUT_FILENO, &print[0], hc_ARRAY_LEN(print));
+    CHECK(written, RES == (sizeof(config_PRINT_WG_PK_STR) - 1) + sizeof(base64PublicKey) + 1);
 }
 
 static hc_COLD void config_configure(void) {
     // Don't respond to ARP on the wrong interface.
     int32_t fd = sys_openat(-1, "/proc/sys/net/ipv4/conf/all/arp_ignore", O_WRONLY, 0);
     CHECK(fd, RES > 0);
-    CHECK(sys_write(fd, "1", 1), RES == 1);
+    CHECK(sys_write(fd, hc_STR_COMMA_LEN("1")), RES == 1);
     debug_CHECK(sys_close(fd), RES == 0);
 
     // wan
@@ -373,7 +380,7 @@ static hc_COLD void config_configure(void) {
     // Enable routing.
     fd = sys_openat(-1, "/proc/sys/net/ipv4/ip_forward", O_WRONLY, 0);
     CHECK(fd, RES > 0);
-    CHECK(sys_write(fd, "1", 1), RES == 1);
+    CHECK(sys_write(fd, hc_STR_COMMA_LEN("1")), RES == 1);
     debug_CHECK(sys_close(fd), RES == 0);
 }
 

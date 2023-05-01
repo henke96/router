@@ -95,7 +95,7 @@ static void dhcpClient_onTimerFd(void) {
     } else {
         // Either we had no leased IP, or we failed to renew it.
         if (dhcpClient.leasedIp != 0) {
-            sys_write(STDOUT_FILENO, "Lost IP lease\n", 15);
+            sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Lost IP lease\n"));
 
             // Remove the IP.
             struct addrRequest {
@@ -120,7 +120,8 @@ static void dhcpClient_onTimerFd(void) {
                 }
             };
             hc_MEMCPY(&request.address, &dhcpClient.leasedIp, 4);
-            netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+            struct iovec_const iov[] = { { &request, sizeof(request) } };
+            netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
             dhcpClient.leasedIp = 0;
         }
         requestMsg.messageType = dhcp_DISCOVER;
@@ -287,12 +288,12 @@ static void dhcpClient_onFd(void) {
                 *--pos = '.';
                 pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[0]);
 
-                struct iovec iov[] = {
-                    { .iov_base = "New IP leased: ", .iov_len = 15 },
-                    { .iov_base = pos, .iov_len = (int64_t)(&printBuffer[18] - pos) },
-                    { .iov_base = "\n", .iov_len = 1 }
+                struct iovec_const print[] = {
+                    { hc_STR_COMMA_LEN("New IP leased: ") },
+                    { pos, (int64_t)(&printBuffer[18] - pos) },
+                    { hc_STR_COMMA_LEN("\n") }
                 };
-                sys_writev(STDOUT_FILENO, &iov[0], hc_ARRAY_LEN(iov));
+                sys_writev(STDOUT_FILENO, &print[0], hc_ARRAY_LEN(print));
             }
 
             // Add the address.
@@ -320,7 +321,8 @@ static void dhcpClient_onFd(void) {
                     }
                 };
                 hc_MEMCPY(&request.address, &header->yourIp[0], 4);
-                netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+                struct iovec_const iov[] = { { &request, sizeof(request) } };
+                netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
             }
 
             // Set default route.
@@ -350,7 +352,8 @@ static void dhcpClient_onFd(void) {
                     }
                 };
                 hc_MEMCPY(&request.gateway, &router->data[0], sizeof(request.gateway));
-                netlink_talk(config.rtnetlinkFd, &(struct iovec) { .iov_base = &request, .iov_len = sizeof(request) }, 1);
+                struct iovec_const iov[] = { { &request, sizeof(request) } };
+                netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
             }
         }
     }

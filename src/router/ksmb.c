@@ -7,7 +7,7 @@ struct ksmb {
 static struct ksmb ksmb;
 
 static hc_COLD void ksmb_init(void) {
-    genetlink_requestFamily(KSMBD_GENL_NAME);
+    genetlink_requestFamily(hc_STR_COMMA_LEN(KSMBD_GENL_NAME));
     struct nlattr *familyId = genetlink_findAttr(CTRL_ATTR_FAMILY_ID);
     ksmb.familyId = *(uint16_t *)&familyId[1];
 
@@ -54,7 +54,8 @@ static hc_COLD void ksmb_init(void) {
             .ifc_list_sz = 0
         }
     };
-    netlink_talk(ksmb.netlinkFd, &(struct iovec) { .iov_base = &startupRequest, .iov_len = sizeof(startupRequest) }, 1);
+    struct iovec_const iov[] = { { &startupRequest, sizeof(startupRequest) } };
+    netlink_talk(ksmb.netlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
 static void ksmb_onNetlinkFd(void) {
@@ -98,7 +99,8 @@ static void ksmb_onNetlinkFd(void) {
                 }
             };
             hc_MEMCPY(&loginResponse.response.account[0], &request->account[0], KSMBD_REQ_MAX_ACCOUNT_NAME_SZ);
-            netlink_talk(ksmb.netlinkFd, &(struct iovec) { .iov_base = &loginResponse, .iov_len = sizeof(loginResponse) }, 1);
+            struct iovec_const iov[] = { { &loginResponse, sizeof(loginResponse) } };
+            netlink_talk(ksmb.netlinkFd, &iov[0], hc_ARRAY_LEN(iov));
             break;
         }
         case KSMBD_EVENT_TREE_CONNECT_REQUEST: {
@@ -132,7 +134,8 @@ static void ksmb_onNetlinkFd(void) {
                     .connection_flags = KSMBD_TREE_CONN_FLAG_WRITABLE
                 }
             };
-            netlink_talk(ksmb.netlinkFd, &(struct iovec) { .iov_base = &treeResponse, .iov_len = sizeof(treeResponse) }, 1);
+            struct iovec_const iov[] = { { &treeResponse, sizeof(treeResponse) } };
+            netlink_talk(ksmb.netlinkFd, &iov[0], hc_ARRAY_LEN(iov));
             break;
         }
         case KSMBD_EVENT_SHARE_CONFIG_REQUEST: {
@@ -170,7 +173,8 @@ static void ksmb_onNetlinkFd(void) {
                 },
                 .path = "/mnt"
             };
-            netlink_talk(ksmb.netlinkFd, &(struct iovec) { .iov_base = &shareResponse, .iov_len = sizeof(shareResponse) }, 1);
+            struct iovec_const iov[] = { { &shareResponse, sizeof(shareResponse) } };
+            netlink_talk(ksmb.netlinkFd, &iov[0], hc_ARRAY_LEN(iov));
             break;
         }
     }

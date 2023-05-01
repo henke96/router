@@ -41,10 +41,10 @@ static hc_COLD void modemClient_init(struct modemClient *self, const char *path)
 
 static void modemClient_disconnect(struct modemClient *self) {
     if (self->fd > 0) {
-        sys_write(self->fd, "\x1b", 1); // Attempt to exit potential `> `-mode by sending escape.
+        sys_write(self->fd, hc_STR_COMMA_LEN("\x1b")); // Attempt to exit potential `> `-mode by sending escape.
         debug_CHECK(sys_close(self->fd), RES == 0);
         self->fd = -1;
-        sys_write(STDOUT_FILENO, "AT disconnect\n", 14);
+        sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("AT disconnect\n"));
     }
 }
 
@@ -59,19 +59,20 @@ static hc_COLD int32_t modemClient_processQueue(struct modemClient *self) {
             break;
         }
         case modemClient_cmd_START_SMS: {
-            struct iovec iov[] = {
-                { .iov_base = "AT+CMGS=\"", .iov_len = 9 },
-                { .iov_base = &cmd->data[0], .iov_len = cmd->dataSize },
-                { .iov_base = "\"\r", .iov_len = 2 }
+            #define modemClient_START_SMS_CMD "AT+CMGS=\""
+            struct iovec_const iov[] = {
+                { hc_STR_COMMA_LEN(modemClient_START_SMS_CMD) },
+                { &cmd->data[0], cmd->dataSize },
+                { hc_STR_COMMA_LEN("\"\r") }
             };
             int64_t written = sys_writev(self->fd, &iov[0], hc_ARRAY_LEN(iov));
-            if (written != 9 + cmd->dataSize + 2) return -1;
+            if (written != (sizeof(modemClient_START_SMS_CMD) - 1) + cmd->dataSize + 2) return -1;
             break;
         }
         case modemClient_cmd_SEND_SMS: {
-            struct iovec iov[] = {
-                { .iov_base = &cmd->data[0], .iov_len = cmd->dataSize },
-                { .iov_base = "\x1a", .iov_len = 1 }
+            struct iovec_const iov[] = {
+                { &cmd->data[0], cmd->dataSize },
+                { hc_STR_COMMA_LEN("\x1a") }
             };
             int64_t written = sys_writev(self->fd, &iov[0], hc_ARRAY_LEN(iov));
             if (written != cmd->dataSize + 1) return -1;
@@ -85,13 +86,14 @@ static hc_COLD int32_t modemClient_processQueue(struct modemClient *self) {
 }
 
 static hc_COLD int32_t modemClient_queueSmsPoll(struct modemClient *self) {
+    #define modemClient_SMS_POLL_CMD "AT+CMGD=,3;+CMGL=\"ALL\"\r"
     struct modemClient_cmd_constant *cmd = (void *)&self->commandQueue[self->commandQueueLength];
     self->commandQueueLength += sizeof(*cmd);
     if (self->commandQueueLength >= (int32_t)sizeof(self->commandQueue)) return -1;
     cmd->type = modemClient_cmd_CONSTANT;
     cmd->dataSize = sizeof(*cmd) - modemClient_cmd_HEADER_SIZE;
-    cmd->cmdLength = 23;
-    cmd->cmd = "AT+CMGD=,3;+CMGL=\"ALL\"\r";
+    cmd->cmdLength = sizeof(modemClient_SMS_POLL_CMD) - 1;
+    cmd->cmd = modemClient_SMS_POLL_CMD;
     if (self->commandQueueLength == sizeof(*cmd)) {
         if (modemClient_processQueue(self) < 0) return -1;
     }
@@ -115,11 +117,12 @@ static hc_COLD void modemClient_onTimerFd(struct modemClient *self, int32_t epol
         if (sys_ioctl(self->fd, TCSETS, &termios) != 0) goto out_fail;
 
         // Send escape, enable echo, set sms to text mode, extended sms info.
+        #define modemClient_INIT_CMDS "ATE0;+CMGF=1;+CSDH=1\r"
         struct modemClient_cmd_constant *cmd = (void *)&self->commandQueue[0];
         cmd->type = modemClient_cmd_CONSTANT;
         cmd->dataSize = sizeof(*cmd) - modemClient_cmd_HEADER_SIZE;
-        cmd->cmdLength = 21;
-        cmd->cmd = "ATE0;+CMGF=1;+CSDH=1\r";
+        cmd->cmdLength = sizeof(modemClient_INIT_CMDS) - 1;
+        cmd->cmd = modemClient_INIT_CMDS;
         self->commandQueueLength = sizeof(*cmd);
         self->bufferLength = 0;
 
@@ -179,13 +182,13 @@ static void modemClient_onFd(struct modemClient *self) {
         }
 
         // Error.
-        if (lineLength == 5 && hc_MEMCMP(&bufferLineStart[0], "ERROR", 5) == 0) {
-            sys_write(STDOUT_FILENO, "AT error!\n", 10);
+        if (lineLength == 5 && hc_MEMCMP(&bufferLineStart[0], hc_STR_COMMA_LEN("ERROR")) == 0) {
+            sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("AT error!\n"));
             goto out_fail;
         }
 
         // Read SMS.
-        if (lineLength >= 7 && hc_MEMCMP(&bufferLineStart[0], "+CMGL: ", 7) == 0) {
+        if (lineLength >= 7 && hc_MEMCMP(&bufferLineStart[0], hc_STR_COMMA_LEN("+CMGL: ")) == 0) {
             // Find end of slot number.
             int32_t slotNumberEnd = 7;
             for (; slotNumberEnd < lineLength; ++slotNumberEnd) {
@@ -264,7 +267,7 @@ static void modemClient_onFd(struct modemClient *self) {
         }
 
         // SMS notification.
-        if (lineLength >= 11 && hc_MEMCMP(&bufferLineStart[0], "+CMTI: \"SM\"", 11) == 0) {
+        if (lineLength >= 11 && hc_MEMCMP(&bufferLineStart[0], hc_STR_COMMA_LEN("+CMTI: \"SM\"")) == 0) {
             if (modemClient_queueSmsPoll(self) < 0) goto out_fail;
             continue;
         }
