@@ -21,7 +21,7 @@ struct config {
 
 static struct config config;
 
-static hc_COLD void config_init(void) {
+static void config_init(void) {
     config.rtnetlinkFd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
     CHECK(config.rtnetlinkFd, RES > 0);
 
@@ -30,7 +30,7 @@ static hc_COLD void config_init(void) {
     config.wgFamilyId = *(uint16_t *)&wgFamilyId[1];
 }
 
-static hc_COLD void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen) {
+static void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen) {
     struct addrRequest {
         struct nlmsghdr hdr;
         struct ifaddrmsg addrMsg;
@@ -58,7 +58,7 @@ static hc_COLD void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t pr
     netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
-static hc_COLD void config_setFlags(int32_t ifIndex, uint32_t flags, uint32_t flagsMask) {
+static void config_setFlags(int32_t ifIndex, uint32_t flags, uint32_t flagsMask) {
     struct linkRequest {
         struct nlmsghdr hdr;
         struct ifinfomsg ifInfo;
@@ -81,7 +81,7 @@ static hc_COLD void config_setFlags(int32_t ifIndex, uint32_t flags, uint32_t fl
     netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
-static hc_COLD void config_setMaster(int32_t ifIndex, int32_t masterIfIndex, uint32_t flags, uint32_t flagsMask) {
+static void config_setMaster(int32_t ifIndex, int32_t masterIfIndex, uint32_t flags, uint32_t flagsMask) {
     struct linkRequest {
         struct nlmsghdr hdr;
         struct ifinfomsg ifInfo;
@@ -111,7 +111,7 @@ static hc_COLD void config_setMaster(int32_t ifIndex, int32_t masterIfIndex, uin
     netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
-static hc_COLD void config_addWgPeer1Route(void) {
+static void config_addWgPeer1Route(void) {
     struct addRouteRequest {
         struct nlmsghdr hdr;
         struct rtmsg rtmsg;
@@ -153,7 +153,7 @@ static hc_COLD void config_addWgPeer1Route(void) {
 }
 
 // Name/type sizes must be multiples of 4 (pad strings with zeroes).
-static hc_COLD void config_addIf(int32_t ifIndex, char *ifName, uint32_t ifNameSize, char *ifType, uint32_t ifTypeSize, uint32_t flags, uint32_t flagsMask) {
+static void config_addIf(int32_t ifIndex, char *ifName, uint32_t ifNameSize, char *ifType, uint32_t ifTypeSize, uint32_t flags, uint32_t flagsMask) {
     debug_ASSERT((ifNameSize & 3) == 0 && (ifTypeSize & 3) == 0);
     struct baseRequest {
         struct nlmsghdr hdr;
@@ -202,7 +202,7 @@ static hc_COLD void config_addIf(int32_t ifIndex, char *ifName, uint32_t ifNameS
     netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
-static hc_COLD void config_setWgDevice(void) {
+static void config_setWgDevice(void) {
     struct setDeviceRequest {
         struct nlmsghdr hdr;
         struct genlmsghdr genHdr;
@@ -300,7 +300,7 @@ static hc_COLD void config_setWgDevice(void) {
     genetlink_talk(&iov[0], hc_ARRAY_LEN(iov));
 }
 
-static hc_COLD void config_printWgPublicKey(void) {
+static void config_printWgPublicKey(void) {
     struct getDeviceRequest {
         struct nlmsghdr hdr;
         struct genlmsghdr genHdr;
@@ -342,7 +342,7 @@ static hc_COLD void config_printWgPublicKey(void) {
     CHECK(written, RES == (sizeof(config_PRINT_WG_PK_STR) - 1) + sizeof(base64PublicKey) + 1);
 }
 
-static hc_COLD void config_configure(void) {
+static void config_configure(void) {
     // Don't respond to ARP on the wrong interface.
     int32_t fd = sys_openat(-1, "/proc/sys/net/ipv4/conf/all/arp_ignore", O_WRONLY, 0);
     CHECK(fd, RES > 0);
@@ -384,6 +384,6 @@ static hc_COLD void config_configure(void) {
     debug_CHECK(sys_close(fd), RES == 0);
 }
 
-static hc_COLD void config_deinit(void) {
+static void config_deinit(void) {
     debug_CHECK(sys_close(config.rtnetlinkFd), RES == 0);
 }

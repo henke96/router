@@ -5,7 +5,7 @@ struct packetDumper {
     int32_t ifIndex;
 };
 
-static hc_COLD void packetDumper_init(struct packetDumper *self, int32_t ifIndex) {
+static void packetDumper_init(struct packetDumper *self, int32_t ifIndex) {
     self->ifIndex = ifIndex;
     self->clientFd = -1;
     self->packetFd = -1;
@@ -125,7 +125,7 @@ static void packetDumper_onClientFd(struct packetDumper *self) {
     packetDumper_stop(self);
 }
 
-static hc_COLD void packetDumper_deinit(struct packetDumper *self) {
+static void packetDumper_deinit(struct packetDumper *self) {
     packetDumper_stop(self);
     debug_CHECK(sys_close(self->listenFd), RES == 0);
 }

@@ -6,7 +6,7 @@ struct acpi {
 
 static struct acpi acpi;
 
-static hc_COLD void acpi_init(void) {
+static void acpi_init(void) {
     genetlink_requestFamily(hc_STR_COMMA_LEN(ACPI_EVENT_FAMILY_NAME));
     struct nlattr *groupsAttr = genetlink_findAttr(CTRL_ATTR_MCAST_GROUPS);
 
@@ -32,6 +32,6 @@ static hc_COLD void acpi_init(void) {
     CHECK(sys_bind(acpi.netlinkFd, &addr, sizeof(addr)), RES == 0);
 }
 
-static hc_COLD void acpi_deinit(void) {
+static void acpi_deinit(void) {
     debug_CHECK(sys_close(acpi.netlinkFd), RES == 0);
 }

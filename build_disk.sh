@@ -31,7 +31,8 @@ src/router/build.sh
                 if test "$BUILD_TYPE" = "debug"; then
                     export DEBUG_PREFIX="debug."
                 fi
-                KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64 LLVM=${LLVM:-1} make -j$NUMCPUS
+                if test -n "$LLVM"; then llvm_prefix="$LLVM/bin/"; fi
+                KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64 LLVM=${llvm_prefix:-1} make -j$NUMCPUS
                 break;;
         esac
     done
@@ -54,7 +55,7 @@ mnt=$(udisksctl mount -b "$dev" 2>&1 | sed -E 's/^Mounted .+ at ([^.]+).*$/\1/' 
 
 # Install OS.
 mkdir -p "$mnt/efi/boot"
-cp src/bootloader/bootloader.efi "$mnt/efi/boot/bootx64.efi"
+cp src/bootloader/x86_64/bootloader.efi "$mnt/efi/boot/bootx64.efi"
 
 # Check if creating installer image or not.
 if test $# -ge 1; then

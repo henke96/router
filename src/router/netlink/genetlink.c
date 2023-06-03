@@ -4,12 +4,12 @@ struct genetlink {
 
 static struct genetlink genetlink;
 
-static hc_COLD void genetlink_init(void) {
+static void genetlink_init(void) {
     genetlink.fd = sys_socket(AF_NETLINK, SOCK_RAW, NETLINK_GENERIC);
     CHECK(genetlink.fd, RES > 0);
 }
 
-static hc_ALWAYS_INLINE void genetlink_talk(struct iovec_const *request, int32_t iovLen) {
+static hc_INLINE void genetlink_talk(struct iovec_const *request, int32_t iovLen) {
     netlink_talk(genetlink.fd, request, iovLen);
 }
 
@@ -20,7 +20,7 @@ static hc_NONULL struct nlattr *genetlink_findAttr(uint16_t attrType) {
     return netlink_findAttr(start, end, attrType);
 }
 
-static hc_COLD void genetlink_requestFamily(const char *nameZ, int32_t nameLen) {
+static void genetlink_requestFamily(const char *nameZ, int32_t nameLen) {
     int32_t nameSize = nameLen + 1; // Include null terminator.
     int32_t namePadSize = math_PAD_BYTES(nameSize, 4);
 
@@ -54,6 +54,6 @@ static hc_COLD void genetlink_requestFamily(const char *nameZ, int32_t nameLen) 
     genetlink_talk(&iov[0], hc_ARRAY_LEN(iov));
 }
 
-static hc_COLD void genetlink_deinit(void) {
+static void genetlink_deinit(void) {
     debug_CHECK(sys_close(genetlink.fd), RES == 0);
 }

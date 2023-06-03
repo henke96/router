@@ -6,7 +6,7 @@ struct ksmb {
 
 static struct ksmb ksmb;
 
-static hc_COLD void ksmb_init(void) {
+static void ksmb_init(void) {
     genetlink_requestFamily(hc_STR_COMMA_LEN(KSMBD_GENL_NAME));
     struct nlattr *familyId = genetlink_findAttr(CTRL_ATTR_FAMILY_ID);
     ksmb.familyId = *(uint16_t *)&familyId[1];
@@ -180,6 +180,6 @@ static void ksmb_onNetlinkFd(void) {
     }
 }
 
-static hc_COLD void ksmb_deinit(void) {
+static void ksmb_deinit(void) {
     debug_CHECK(sys_close(ksmb.netlinkFd), RES == 0);
 }

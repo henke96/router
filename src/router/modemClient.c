@@ -28,7 +28,7 @@ struct modemClient {
 
 };
 
-static hc_COLD void modemClient_init(struct modemClient *self, const char *path) {
+static void modemClient_init(struct modemClient *self, const char *path) {
     self->path = path;
     self->fd = -1;
     self->timerFd = sys_timerfd_create(CLOCK_MONOTONIC, 0);
@@ -48,7 +48,7 @@ static void modemClient_disconnect(struct modemClient *self) {
     }
 }
 
-static hc_COLD int32_t modemClient_processQueue(struct modemClient *self) {
+static int32_t modemClient_processQueue(struct modemClient *self) {
     debug_ASSERT(self->commandQueueLength > 0);
     struct modemClient_cmd *cmd = (void *)&self->commandQueue[0];
     switch (cmd->type) {
@@ -85,7 +85,7 @@ static hc_COLD int32_t modemClient_processQueue(struct modemClient *self) {
     return 0;
 }
 
-static hc_COLD int32_t modemClient_queueSmsPoll(struct modemClient *self) {
+static int32_t modemClient_queueSmsPoll(struct modemClient *self) {
     #define modemClient_SMS_POLL_CMD "AT+CMGD=,3;+CMGL=\"ALL\"\r"
     struct modemClient_cmd_constant *cmd = (void *)&self->commandQueue[self->commandQueueLength];
     self->commandQueueLength += sizeof(*cmd);
@@ -100,7 +100,7 @@ static hc_COLD int32_t modemClient_queueSmsPoll(struct modemClient *self) {
     return 0;
 }
 
-static hc_COLD void modemClient_onTimerFd(struct modemClient *self, int32_t epollFd) {
+static void modemClient_onTimerFd(struct modemClient *self, int32_t epollFd) {
     if (self->fd < 0) { // Not connected, try to connect.
         self->fd = sys_openat(-1, &self->path[0], O_RDWR | O_NOCTTY, 0);
         debug_ASSERT(self->fd > 0 || self->fd == -ENOENT);
@@ -281,7 +281,7 @@ static void modemClient_onFd(struct modemClient *self) {
     hc_MEMMOVE(&self->buffer[0], &self->buffer[lineStart], (uint64_t)self->bufferLength);
 }
 
-static hc_COLD void modemClient_deinit(struct modemClient *self) {
+static void modemClient_deinit(struct modemClient *self) {
     modemClient_disconnect(self);
     debug_CHECK(sys_close(self->timerFd), RES == 0);
 }
