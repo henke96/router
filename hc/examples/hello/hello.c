@@ -1,9 +1,0 @@
-#include "hc/hc.h"
-#include "hc/linux/linux.h"
-#include "hc/linux/sys.c"
-#include "hc/linux/helpers/_start.c"
-
-int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
-    sys_write(STDOUT_FILENO, "Hello!\n", 7);
-    return 0;
-}

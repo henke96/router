@@ -1,5 +1,6 @@
 @echo off
-setlocal
-cd %~dp0
-if %errorlevel% neq 0 exit /b
-git clean -fdqX
+setlocal disabledelayedexpansion
+set "script_dir=%~dp0"
+set "script_dir=%script_dir:~0,-1%"
+
+git -C "%script_dir%" clean -fdqX

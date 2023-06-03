@@ -1,25 +1,23 @@
 @echo off
-setlocal
-set "root_dir=%~dp0..\..\"
+setlocal disabledelayedexpansion
+set "script_dir=%~dp0"
+set "script_dir=%script_dir:~0,-1%"
+set "root_dir=%script_dir%\..\.."
 
-set "ARCH=x86_64"
+if defined LLVM set "llvm_prefix=%LLVM%\bin\"
 
-:: Kernel
-if not defined ABI set ABI=elf
-set "flags=-Wl,-T^"%~dp0kernel\kernel.ld^" -mno-red-zone -O2 -s"
-call "%root_dir%cc_elf.bat" %flags% -S -o "%~dp0kernel\kernel.bin.s" "%~dp0kernel\kernel.c"
-if %errorlevel% neq 0 exit /b
-call "%root_dir%cc_elf.bat" %flags% -o "%~dp0kernel\kernel.bin.elf" "%~dp0kernel\kernel.c"
-if %errorlevel% neq 0 exit /b
+set NO_AARCH64=1 & set NO_RISCV64=1
 
-:: Static analysis.
-set "analyse_flags=--analyze --analyzer-output text -Xclang -analyzer-opt-analyze-headers"
-call "%root_dir%cc_elf.bat" %flags% %analyse_flags% "%~dp0kernel\kernel.c"
-if %errorlevel% neq 0 exit /b
+rem Kernel
+set "FLAGS=-Wl,-T^"%script_dir%\kernel\kernel.ld^" -mno-red-zone -mno-mmx -mno-sse -mno-sse2"
+call "%root_dir%\tools\build\elf.bat" "%script_dir%\kernel" kernel
+if not errorlevel 0 exit /b & if errorlevel 1 exit /b
 
-"%LLVM%llvm-objcopy" -O binary "%~dp0kernel\kernel.bin.elf" "%~dp0kernel\kernel.bin"
-if %errorlevel% neq 0 exit /b
+"%llvm_prefix%llvm-objcopy" -O binary "%script_dir%\kernel\x86_64\kernel.elf" "%script_dir%\kernel\x86_64\kernel.bin"
+if not errorlevel 0 exit /b & if errorlevel 1 exit /b
+"%llvm_prefix%llvm-objcopy" -O binary "%script_dir%\kernel\x86_64\debug.kernel.elf" "%script_dir%\kernel\x86_64\debug.kernel.bin"
+if not errorlevel 0 exit /b & if errorlevel 1 exit /b
 
-:: Bootloader (with kernel binary embedded)
-set "FLAGS=-I^"%~dp0kernel\\^" -Os"
-call "%root_dir%tools\build\efi.bat" "%~dp0bootloader\" bootloader
+rem Bootloader (with kernel binary embedded)
+set "FLAGS=" & set "FLAGS_X86_64=-I^"%script_dir%\kernel\x86_64^""
+call "%root_dir%\tools\build\efi.bat" "%script_dir%\bootloader" bootloader

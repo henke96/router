@@ -1,11 +1,11 @@
 @echo off
-setlocal
-set "root_dir=%~dp0..\..\..\"
+setlocal disabledelayedexpansion
+set "script_dir=%~dp0"
+set "script_dir=%script_dir:~0,-1%"
+set "root_dir=%script_dir%\..\..\.."
 
-set "FLAGS=-Wl,--no-entry"
-call "%root_dir%tools\build\wasm.bat" "%~dp0" allocation
-if %errorlevel% neq 0 exit /b
+set "FLAGS=-Wl,--no-entry %FLAGS%"
+call "%root_dir%\tools\build\wasm.bat" "%script_dir%" allocation
+if not errorlevel 0 exit /b & if errorlevel 1 exit /b
 
-cd "%~dp0"
-if %errorlevel% neq 0 exit /b
-call "..\..\..\tools\htmlPacker\htmlPacker.bat" _start.html allocation
+call "%root_dir%\tools\htmlPacker\htmlPacker.bat" "%script_dir%" _start.html allocation

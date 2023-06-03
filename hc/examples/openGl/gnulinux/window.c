@@ -7,7 +7,7 @@ struct window_x11 {
     struct x11Client client;
     struct x11_getKeyboardMappingResponse *keyboardMap;
     struct x11_getModifierMappingResponse *modifierMap;
-    uint32_t keyboardMapSize;
+    int32_t keyboardMapSize;
     uint32_t windowId;
     uint32_t rootWindowId;
     uint32_t wmProtocolsAtom;
@@ -151,7 +151,7 @@ static int32_t window_init(char **envp) {
     return -1;
 }
 
-static inline int32_t window_run(void) {
+static int32_t window_run(void) {
     switch (window.platform) {
         case window_X11: return window_x11_run();
         case window_GBM: return window_gbm_run();

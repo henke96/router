@@ -12,6 +12,10 @@
 
 #include "../common.c"
 
+static int32_t changeDir(char *path) {
+    return sys_chdir(path);
+}
+
 static int32_t replaceWithFile(int64_t replaceIndex, int64_t replaceLen, char *path, int32_t pathLen, bool asBase64) {
     // Add null terminator to path.
     char *pathZ = &alloc.mem[bufferLen];
@@ -56,13 +60,13 @@ static int32_t replaceWithFile(int64_t replaceIndex, int64_t replaceLen, char *p
     int64_t remaining = contentLen;
     while (remaining > 0) {
         int64_t index = contentLen - remaining;
-        int64_t read = sys_read(pathFd, &content[index], remaining);
-        if (read < 0) {
-            if (read == EINTR) continue;
+        int64_t numRead = sys_read(pathFd, &content[index], remaining);
+        if (numRead < 0) {
+            if (numRead == -EINTR) continue;
             status = -5;
             goto cleanup_pathFd;
         }
-        remaining -= read;
+        remaining -= numRead;
     }
     // Verify we are at end of file.
     char eofTest;
@@ -90,7 +94,7 @@ static int32_t writeToFile(char *path, char *content, int64_t contentLen) {
         int64_t index = contentLen - remaining;
         int64_t written = sys_write(fd, &content[index], remaining);
         if (written < 0) {
-            if (written == EINTR) continue;
+            if (written == -EINTR) continue;
             status = -2;
             goto cleanup_fd;
         }

@@ -1,15 +1,10 @@
 @echo off
-setlocal
-cd "%~dp0"
-if %errorlevel% neq 0 exit /b
+setlocal disabledelayedexpansion
+set "script_dir=%~dp0"
+set "script_dir=%script_dir:~0,-1%"
 
-for /R %%f in (*build.bat) do (
-    endlocal
-
+for /r "%script_dir%" %%f in (*build.bat) do (
     echo "%%f"
     call "%%f"
-
-    setlocal
-    cd "%~dp0"
-    if %errorlevel% neq 0 exit /b
+    if not errorlevel 0 exit /b & if errorlevel 1 exit /b
 )
