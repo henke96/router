@@ -2,11 +2,12 @@
 #include "hc/elf.h"
 #include "hc/math.c"
 #include "hc/util.c"
-#include "hc/libc/small.c"
+#include "hc/debug.h"
+#include "hc/compiler_rt/libc.c"
 #include "hc/linux/linux.h"
-#include "hc/linux/util.c"
 #include "hc/linux/sys.c"
 #include "hc/linux/debug.c"
+#include "hc/linux/util.c"
 #include "hc/linux/tls.c"
 #include "hc/linux/helpers/_start.c"
 #include "hc/linux/helpers/sys_clone3_func.c"
@@ -44,8 +45,8 @@ static noreturn void thread(void *arg) {
     sys_exit(0);
 }
 
-int32_t start(int32_t argc, char **argv) {
-    uint64_t *auxv = util_getAuxv(util_getEnvp(argc, argv));
+int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
+    uint64_t *auxv = util_getAuxv(envp);
 
     struct elf_programHeader *tlsProgramHeader = tls_findProgramHeader(auxv);
     if (tlsProgramHeader == NULL) return 1;
@@ -81,6 +82,12 @@ int32_t start(int32_t argc, char **argv) {
         if (ret < 0) return 3;
     }
 
+    // Wait for child to finish.
+    for (;;) {
+        if (hc_ATOMIC_LOAD(&childDone, hc_ATOMIC_ACQUIRE) == 0) break;
+        debug_CHECK(sys_futex(&childDone, FUTEX_WAIT, 1, NULL, NULL, 0), RES == 0 || RES == -EAGAIN);
+    }
+
     debug_printNum("parent test1 = ", test1, "\n");
     debug_printNum("parent test2 = ", test2, "\n");
     debug_printNum("parent test3 = ", test3, "\n");
@@ -93,12 +100,6 @@ int32_t start(int32_t argc, char **argv) {
     debug_printNum("parent &test4 = ", (int64_t)&test4, "\n");
     debug_printNum("parent &test5 = ", (int64_t)&test5, "\n");
     debug_printNum("parent &test6 = ", (int64_t)&test6, "\n");
-
-    // Wait for child to finish.
-    for (;;) {
-        if (hc_ATOMIC_LOAD(&childDone, hc_ATOMIC_ACQUIRE) == 0) break;
-        debug_CHECK(sys_futex(&childDone, FUTEX_WAIT, 1, NULL, NULL, 0), RES == 0 || RES == -EAGAIN);
-    }
 
     return 0;
 }

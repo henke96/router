@@ -18,10 +18,11 @@ if test -n "$LINK_LIBDL"; then FLAGS="-l:libdl.so $FLAGS"; fi
 if test -n "$LINK_LIBANDROID"; then FLAGS="-l:libandroid.so $FLAGS"; fi
 if test -n "$LINK_LIBC"; then FLAGS="-l:libc.so $FLAGS"; fi
 
-if test -z "$NO_X86_64"; then ARCH="x86_64" build; fi
-if test -z "$NO_AARCH64"; then ARCH="aarch64" build; fi
+if test -z "$NO_X86_64"; then export ARCH="x86_64"; build; fi
+if test -z "$NO_AARCH64"; then export ARCH="aarch64"; build; fi
 
 export NO_RISCV64=1
-export ABI="linux-android26" STRIP_OPT="--strip-all"
+export ABI="linux-android26"
 export FLAGS="-fPIC -fpie -pie -Wl,-dynamic-linker=/system/bin/linker64 $FLAGS"
+export STRIP_OPT="${STRIP_OPT:---strip-all}"
 "$script_dir/elf.sh" "$@"

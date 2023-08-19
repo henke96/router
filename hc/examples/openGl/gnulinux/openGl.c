@@ -4,13 +4,14 @@
 #include "hc/gl.h"
 #include "hc/elf.h"
 #include "hc/x11.h"
-#include "hc/libc/musl.c"
+#include "hc/debug.h"
+#include "hc/compiler_rt/libc.c"
 #include "hc/linux/linux.h"
-#include "hc/linux/util.c"
 #include "hc/linux/sys.c"
 #include "hc/linux/debug.c"
+#include "hc/linux/util.c"
 #include "hc/linux/xauth.c"
-static int64_t openGl_pageSize;
+static int32_t openGl_pageSize;
 #define x11Client_PAGE_SIZE openGl_pageSize
 #include "hc/linux/x11Client.c"
 #include "hc/linux/gnulinux/libc.so.6.h"
@@ -19,7 +20,6 @@ static int64_t openGl_pageSize;
 #include "hc/linux/egl.c"
 #include "hc/linux/gbm.c"
 #include "hc/linux/drmKms.c"
-int32_t start(int32_t, char **, char **);
 #include "hc/linux/gnulinux/_start.c"
 
 #define game_EXPORT(NAME) static
@@ -34,7 +34,7 @@ int32_t start(int32_t, char **, char **);
 #include "window.c"
 
 int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
-    openGl_pageSize = util_getPageSize(util_getAuxv(envp));
+    openGl_pageSize = (int32_t)getauxval(AT_PAGESZ);
 
     int32_t status = window_init(envp);
     if (status < 0) return 1;

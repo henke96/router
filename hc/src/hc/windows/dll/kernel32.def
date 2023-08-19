@@ -27,3 +27,8 @@ CloseHandle
 GetFileSizeEx
 ReadFile
 SetCurrentDirectoryW
+GetSystemInfo
+GetEnvironmentStringsW
+FreeEnvironmentStringsW
+CreateThread
+WaitForSingleObjectEx

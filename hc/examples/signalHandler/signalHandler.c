@@ -1,6 +1,7 @@
 #include "hc/hc.h"
 #include "hc/util.c"
-#include "hc/libc/small.c"
+#include "hc/debug.h"
+#include "hc/compiler_rt/libc.c"
 #include "hc/linux/linux.h"
 #include "hc/linux/sys.c"
 #include "hc/linux/debug.c"
@@ -20,7 +21,7 @@ static void sigaction(int32_t sig, struct siginfo *info, hc_UNUSED void *ucontex
     debug_printNum("  si_uid: ", info->si_uid, "\n");
 }
 
-int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
+int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **envp) {
     // Set up a `sa_handler` handler for SIGINT.
     // Test with Ctrl-C.
     {
@@ -29,7 +30,7 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
     }
 
     // Set up a `sa_sigaction` handler for SIGQUIT.
-    // Test with something like `kill -SIGQUIT $(pidof release.bin)`.
+    // Test with something like `kill -SIGQUIT $(pidof signalHandler.elf)`.
     {
         struct sigaction action = {
             .sa_sigaction = sigaction,

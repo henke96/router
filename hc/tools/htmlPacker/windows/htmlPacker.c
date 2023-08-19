@@ -2,14 +2,22 @@
 #include "hc/math.c"
 #include "hc/util.c"
 #include "hc/base64.c"
-#include "hc/libc/small.c"
+#include "hc/debug.h"
+#include "hc/compiler_rt/libc.c"
 #include "hc/windows/windows.h"
 #include "hc/windows/debug.c"
 #include "hc/windows/heap.c"
 #include "hc/windows/_start.c"
+
+static struct SYSTEMINFO systemInfo;
+#define allocator_PAGE_SIZE systemInfo.pageSize
 #include "hc/allocator.c"
 
 #include "../common.c"
+
+void initialise(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **envp) {
+    GetSystemInfo(&systemInfo);
+}
 
 // Convert utf8 (optionally null terminated if `utf8Length` is -1) into null terminated utf16.
 // Returns result length (negative on error). Result is placed at the end of `alloc.mem`.
@@ -32,7 +40,7 @@ static int32_t utf8ToUtf16(char *utf8, int32_t utf8Length) {
             utf16Z, utf16Count
         ) != utf16Count
     ) return -1;
-    utf16Z[utf16ZCount - 1] = L'\0';
+    utf16Z[utf16ZCount - 1] = u'\0';
     return utf16ZCount;
 }
 

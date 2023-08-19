@@ -6,7 +6,7 @@ _Static_assert(sizeof(short) == 2, "short not 2 bytes");
 _Static_assert(sizeof(void *) == 4 || sizeof(void *) == 8, "void * not 4 or 8 bytes");
 _Static_assert(-1 == ~0, "not two's complement");
 _Static_assert((-1 >> 1) == -1, "not arithmetic shift right");
-_Static_assert(sizeof(L""[0]) == 2, "L string literal not 2 bytes");
+_Static_assert(sizeof(u""[0]) == 2, "u string literal not 2 bytes");
 _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
 
 #if defined(__x86_64__)
@@ -44,6 +44,7 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
 
 // Attributes
 #define hc_WEAK __attribute__((weak))
+#define hc_ALIAS(NAME) __attribute__((alias(NAME)))
 #define hc_FALLTHROUGH __attribute__((fallthrough))
 #define hc_NONULL __attribute__((nonnull))
 #define hc_UNUSED __attribute__((unused))
@@ -52,7 +53,9 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
 #define hc_ALIGNED(N) __attribute__((aligned(N)))
 #define hc_SECTION(NAME) __attribute__((section(NAME)))
 #define hc_INLINE __attribute__((always_inline)) inline
+#define hc_NO_INLINE __attribute__((noinline))
 #define hc_NO_BUILTIN __attribute__((no_builtin))
+#define hc_NO_DISCARD __attribute__((warn_unused_result))
 #if hc_X86_64
     #define hc_MS_ABI __attribute__((ms_abi))
     #define hc_SYSV_ABI __attribute__((sysv_abi))
@@ -69,6 +72,7 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
 
 // Builtins
 #define hc_UNREACHABLE __builtin_unreachable()
+#define hc_TRAP __builtin_trap()
 #define hc_ASSUME __builtin_assume
 #define hc_ASSUME_ALIGNED __builtin_assume_aligned
 #define hc_ABS32 __builtin_abs
@@ -78,6 +82,14 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
 #define hc_BSWAP64 __builtin_bswap64
 #define hc_POPCOUNT32 __builtin_popcount
 #define hc_POPCOUNT64 __builtin_popcountll
+#define hc_ROTL8 __builtin_rotateleft8
+#define hc_ROTL16 __builtin_rotateleft16
+#define hc_ROTL32 __builtin_rotateleft32
+#define hc_ROTL64 __builtin_rotateleft64
+#define hc_ROTR8 __builtin_rotateright8
+#define hc_ROTR16 __builtin_rotateright16
+#define hc_ROTR32 __builtin_rotateright32
+#define hc_ROTR64 __builtin_rotateright64
 #define hc_MEMCPY __builtin_memcpy
 #define hc_MEMMOVE __builtin_memmove
 #define hc_MEMCMP __builtin_memcmp
@@ -108,9 +120,14 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
     #define hc_ATOMIC_PAUSE
 #endif
 
-// TODO: wasm32 seems to need compiler_rt for these (https://github.com/llvm-mirror/compiler-rt/blob/master/lib/builtins/multi3.c)
 typedef __int128_t int128_t;
 typedef __uint128_t uint128_t;
+
+#if hc_WASM32
+    #define hc_MUL128_64x64(A, B) mul128_64x64((A), (B))
+#else
+    #define hc_MUL128_64x64(A, B) ((uint128_t)(A) * (B))
+#endif
 
 // Standard C
 #define NULL ((void *)0)

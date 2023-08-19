@@ -13,7 +13,9 @@ build() {
     fi
     "$root_dir/cc_elf.sh" $debug_flags -o "$prog_path/$ARCH/debug.$prog_name.$ext" "$prog_path/$prog_name.c" "$@"
     "$root_dir/cc_elf.sh" $release_flags -o "$prog_path/$ARCH/$prog_name.$ext" "$prog_path/$prog_name.c" "$@"
-    "${llvm_prefix}llvm-objcopy" $STRIP_OPT "$prog_path/$ARCH/$prog_name.$ext"
+    if test -n "$STRIP_OPT"; then
+        "${llvm_prefix}llvm-objcopy" $STRIP_OPT "$prog_path/$ARCH/$prog_name.$ext"
+    fi
 
     if test -z "$NO_ANALYSIS"; then
         "$root_dir/cc_elf.sh" $debug_flags $analyse_flags "$prog_path/$prog_name.c" "$@"
@@ -27,12 +29,10 @@ prog_path="$1"
 prog_name="$2"
 ext="${3:-elf}"
 
-STRIP_OPT="${STRIP_OPT:---strip-sections}"
-
 analyse_flags="--analyze --analyzer-output text -Xclang -analyzer-opt-analyze-headers"
-debug_flags="-fsanitize-undefined-trap-on-error -fsanitize=undefined -g"
-release_flags="-fomit-frame-pointer -Ddebug_NDEBUG -s -Os"
+debug_flags="-fsanitize-undefined-trap-on-error -fsanitize=undefined -g -Dhc_DEBUG"
+release_flags="-fomit-frame-pointer -s -Os"
 
-if test -z "$NO_X86_64"; then ARCH="x86_64" build "$FLAGS_X86_64"; fi
-if test -z "$NO_AARCH64"; then ARCH="aarch64" build "$FLAGS_AARCH64"; fi
-if test -z "$NO_RISCV64"; then ARCH="riscv64" build "$FLAGS_RISCV64"; fi
+if test -z "$NO_X86_64"; then export ARCH="x86_64"; build "$FLAGS_X86_64"; fi
+if test -z "$NO_AARCH64"; then export ARCH="aarch64"; build "$FLAGS_AARCH64"; fi
+if test -z "$NO_RISCV64"; then export ARCH="riscv64"; build "$FLAGS_RISCV64"; fi

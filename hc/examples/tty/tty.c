@@ -1,17 +1,18 @@
 #include "hc/hc.h"
 #include "hc/util.c"
-#include "hc/libc/musl.c"
+#include "hc/debug.h"
+#include "hc/compiler_rt/libc.c"
 #include "hc/linux/linux.h"
-#include "hc/linux/util.c"
 #include "hc/linux/sys.c"
 #include "hc/linux/debug.c"
+#include "hc/linux/util.c"
 #include "hc/linux/drmKms.c"
 #include "hc/linux/helpers/_start.c"
 #include "hc/linux/helpers/sys_clone3_exit.c"
 
 #include "graphics.c"
 
-int32_t start(int32_t argc, char **argv) {
+int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
     // Set up epoll.
     int32_t epollFd = sys_epoll_create1(0);
     if (epollFd < 0) return 1;
