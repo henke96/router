@@ -1,68 +1,43 @@
-#!/bin/sh
+#!/bin/sh --
 # Usage: ./build_disk.sh [INSTALL_DEV]
 #
 # INSTALL_DEV Allows creating an installer image that will install to the
 #             provided device name, or promt the user if empty string.
 set -e
-
-cleanup() {
-    set +e
-    umount "$mnt"
-    udisksctl loop-delete -b "$dev"
-}
-trap cleanup EXIT
+script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
 
 # Can be `debug` or `release`.
 export BUILD_TYPE="${BUILD_TYPE:-debug}"
 
+# Build LLVM.
+"$script_dir/recipes/llvm.sh"
+export LLVM="$script_dir/recipes/llvm"
+
 # Build everything for initramfs.
-src/init/build.sh
-src/router/build.sh
+"$script_dir/src/init/build.sh"
+"$script_dir/src/router/build.sh"
 
 # Build Linux.
-(
-    for dir in linux/linux*; do
-        case "$dir" in
-            linux/linux-firmware*) continue;;
-            linux/linux.config) continue;;
-            *)
-                cd "$dir"
-                export LINUX_FIRMWARE=$(echo ../linux-firmware*) # For initramfs building.
-                if test "$BUILD_TYPE" = "debug"; then
-                    export DEBUG_PREFIX="debug."
-                fi
-                if test -n "$LLVM"; then llvm_prefix="$LLVM/bin/"; fi
-                KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64 LLVM=${llvm_prefix:-1} make -j$NUMCPUS
-                break;;
-        esac
-    done
-)
+"$script_dir/recipes/linux.sh"
 
 # Build bootloader.
-src/bootloader/build.sh
+"$script_dir/src/bootloader/build.sh"
 
 # Create disk.
-dd if=/dev/zero of=disk.img bs=1048576 count=8
-
-# Create disk filesystem.
-mkfs.fat -F 12 -i 0 -n ROUTER disk.img
-
-# Create loop device for disk.
-dev=$(udisksctl loop-setup -f disk.img | sed -E 's/^Mapped file .+ as ([^.]+).*$/\1/')
-
-# Mount disk.
-mnt=$(udisksctl mount -b "$dev" 2>&1 | sed -E 's/^Mounted .+ at ([^.]+).*$/\1/' | sed -E 's/.+ already mounted at `(.+)'\''.*$/\1/')
-
-# Install OS.
-mkdir -p "$mnt/efi/boot"
-cp src/bootloader/x86_64/bootloader.efi "$mnt/efi/boot/bootx64.efi"
+export PATH="$script_dir/recipes/mtools/bin:$PATH"
+dd if=/dev/zero of="$script_dir/disk.img" bs=1048576 count=8
+mformat -i "$script_dir/disk.img" -N 0 -v ROUTER ::
+mmd -i "$script_dir/disk.img" ::/efi
+mmd -i "$script_dir/disk.img" ::/efi/boot
+mcopy -i "$script_dir/disk.img" "$script_dir/src/bootloader/x86_64/bootloader.efi" ::/efi/boot/bootx64.efi
 
 # Check if creating installer image or not.
 if test $# -ge 1; then
     # Yes, create install file.
-    echo -n "$1" > "$mnt/install"
+    echo -n "$1" | mcopy -i "$script_dir/disk.img" - ::/install
 fi
 
 # Generate a wireguard key. TODO: remove
-mkdir -p "$mnt/config/wg"
-dd if=/dev/urandom of="$mnt/config/wg/key" bs=32 count=1
+mmd -i "$script_dir/disk.img" ::/config
+mmd -i "$script_dir/disk.img" ::/config/wg
+dd if=/dev/urandom bs=32 count=1 | mcopy -i "$script_dir/disk.img" - ::/config/wg/key

@@ -9,5 +9,5 @@ dir /lib/firmware 0755 0 0
 
 file /init ../../src/init/x86_64/${DEBUG_PREFIX}init.elf 0755 0 0
 file /router ../../src/router/x86_64/${DEBUG_PREFIX}router.elf 0755 0 0
-file /lib/firmware/iwlwifi-cc-a0-72.ucode ${LINUX_FIRMWARE}/iwlwifi-cc-a0-72.ucode 0755 0 0
-file /lib/firmware/regulatory.db ../regulatory.db 0755 0 0
+file /lib/firmware/iwlwifi-cc-a0-72.ucode ../linux-firmware/iwlwifi-cc-a0-72.ucode 0755 0 0
+file /lib/firmware/regulatory.db ../files/linux/regulatory.db 0755 0 0

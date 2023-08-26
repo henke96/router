@@ -1,7 +1,5 @@
 # Building Image
-1. Follow `linux/README.md`
-2. Set `LLVM` environment variable if needed
-3. Run `./build_disk.sh` to build disk.img
+1. Run `./build_disk.sh` to build disk.img
 
 # Running in Qemu
 1. Run `sudo ./qemu.sh`

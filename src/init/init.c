@@ -1,11 +1,12 @@
 #include "hc/hc.h"
+#include "hc/debug.h"
 #include "hc/math.c"
 #include "hc/util.c"
-#include "hc/libc/small.c"
+#include "hc/compiler_rt/libc.c"
 #include "hc/linux/linux.h"
 #include "hc/linux/sys.c"
-#include "hc/linux/util.c"
 #include "hc/linux/debug.c"
+#include "hc/linux/util.c"
 #include "hc/linux/helpers/_start.c"
 
 #define IMAGE_INSTALL_SIZE 0x800000 // 8 MiB
@@ -159,7 +160,7 @@ static int32_t handleInstallation(void) {
     return 1; // Success!
 }
 
-int32_t start(int32_t argc, char **argv) {
+int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
     bool cleanExit = false;
     int32_t status = initialise();
     if (status < 0) {
@@ -201,7 +202,7 @@ int32_t start(int32_t argc, char **argv) {
     status = sys_clone3(&args);
     if (status == 0) {
         const char *newArgv[] = { "/router", NULL };
-        sys_execveat(-1, newArgv[0], &newArgv[0], (const char *const *)util_getEnvp(argc, argv), 0);
+        sys_execveat(-1, newArgv[0], &newArgv[0], (const char *const *)envp, 0);
         return 1; // Let _start exit the child.
     }
     if (status < 0) goto halt_umount;

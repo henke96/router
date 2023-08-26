@@ -3,3 +3,4 @@
 *.efi
 *.efi.s
 *.img
+/tags

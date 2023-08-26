@@ -1,7 +1,7 @@
 #include "hc/hc.h"
 #include "hc/efi.h"
 #include "hc/util.c"
-#include "hc/libc/small.c"
+#include "hc/compiler_rt/libc.c"
 #include "linuxBin.c"
 
 static uint16_t linuxCmdLine[] = L"         mitigations=off video=efifb:width:800,height:480";

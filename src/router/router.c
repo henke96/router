@@ -1,8 +1,9 @@
 #include "hc/hc.h"
+#include "hc/debug.h"
 #include "hc/math.c"
 #include "hc/util.c"
 #include "hc/base64.c"
-#include "hc/libc/small.c"
+#include "hc/compiler_rt/libc.c"
 #include "hc/linux/linux.h"
 #include "hc/linux/sys.c"
 #include "hc/linux/debug.c"
@@ -36,7 +37,7 @@ static void epollAdd(int32_t epollFd, int32_t fd) {
 #include "packetDumper.c"
 #include "modemClient.c"
 
-int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv) {
+int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **envp) {
     genetlink_init();
 
     acpi_init();
