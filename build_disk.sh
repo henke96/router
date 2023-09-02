@@ -20,6 +20,7 @@ fi
 "$script_dir/recipes_target/$disk_recipe.sh"
 cp "$script_dir/recipes_target/$disk_recipe/disk.img" "$script_dir/"
 
+export PATH="$script_dir/recipes_host/mtools/bin:$PATH"
 # Check if creating installer image or not.
 if test $# -ge 1; then
     # Yes, create install file.
