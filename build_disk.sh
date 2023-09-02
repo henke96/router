@@ -9,27 +9,16 @@ script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
 # Can be `debug` or `release`.
 export BUILD_TYPE="${BUILD_TYPE:-debug}"
 
-# Build LLVM.
-"$script_dir/recipes/llvm.sh"
-export LLVM="$script_dir/recipes/llvm"
-
-# Build everything for initramfs.
-"$script_dir/src/init/build.sh"
-"$script_dir/src/router/build.sh"
-
-# Build Linux.
-"$script_dir/recipes/linux.sh"
-
-# Build bootloader.
-"$script_dir/src/bootloader/build.sh"
-
-# Create disk.
-export PATH="$script_dir/recipes/mtools/bin:$PATH"
-dd if=/dev/zero of="$script_dir/disk.img" bs=1048576 count=8
-mformat -i "$script_dir/disk.img" -N 0 -v ROUTER ::
-mmd -i "$script_dir/disk.img" ::/efi
-mmd -i "$script_dir/disk.img" ::/efi/boot
-mcopy -i "$script_dir/disk.img" "$script_dir/src/bootloader/x86_64/bootloader.efi" ::/efi/boot/bootx64.efi
+if test "$BUILD_TYPE" = "debug"; then
+    disk_recipe=disk-debug
+elif test "$BUILD_TYPE" = "release"; then
+    disk_recipe=disk
+else
+    echo "Invalid BUILD_TYPE"
+    exit 1
+fi
+"$script_dir/recipes_target/$disk_recipe.sh"
+cp "$script_dir/recipes_target/$disk_recipe/disk.img" "$script_dir/"
 
 # Check if creating installer image or not.
 if test $# -ge 1; then
