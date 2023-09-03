@@ -8,7 +8,6 @@
 #define config_WG_IF_INDEX 123
 // Try to use a port that is unlikely to be blocked by firewalls.
 #define config_WG_LISTEN_PORT 123
-#define config_WG_PEER1_ADDRESS { 10, 123, 1, 1 }
 // Generate with `echo <base64-public-key> | base64 --decode | xxd -i -c 256`
 #define config_WG_PEER1_PUBLIC_KEY { 0xb4, 0x9d, 0x1d, 0xd5, 0x50, 0x61, 0x5a, 0xa8, 0xf0, 0x49, 0xd0, 0x78, 0x66, 0x70, 0x09, 0xfc, 0x92, 0x56, 0xd2, 0xfa, 0x0c, 0x18, 0x29, 0x22, 0xa7, 0x7f, 0x5e, 0xff, 0x21, 0x71, 0x36, 0x5d }
 
@@ -111,7 +110,7 @@ static void config_setMaster(int32_t ifIndex, int32_t masterIfIndex, uint32_t fl
     netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
 
-static void config_addWgPeer1Route(void) {
+static void config_addWgRoute(void) {
     struct addRouteRequest {
         struct nlmsghdr hdr;
         struct rtmsg rtmsg;
@@ -128,7 +127,7 @@ static void config_addWgPeer1Route(void) {
         },
         .rtmsg = {
             .rtm_family = AF_INET,
-            .rtm_dst_len = 32,
+            .rtm_dst_len = 24,
             .rtm_src_len = 0,
             .rtm_tos = 0,
             .rtm_table = RT_TABLE_MAIN,
@@ -141,7 +140,7 @@ static void config_addWgPeer1Route(void) {
             .nla_len = sizeof(request.destAttr) + sizeof(request.dest),
             .nla_type = RTA_DST
         },
-        .dest = config_WG_PEER1_ADDRESS,
+        .dest = { 10, 123, 1, 0 },
         .outIfAttr = {
             .nla_len = sizeof(request.outIfAttr) + sizeof(request.outIfIndex),
             .nla_type = RTA_OIF
@@ -200,6 +199,48 @@ static void config_addIf(int32_t ifIndex, char *ifName, uint32_t ifNameSize, cha
         { &ifType[0],   ifTypeSize }
     };
     netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
+}
+
+static void config_printWgPublicKey(void) {
+    struct getDeviceRequest {
+        struct nlmsghdr hdr;
+        struct genlmsghdr genHdr;
+        struct nlattr ifIndexAttr;
+        uint32_t ifIndex;
+    };
+    struct getDeviceRequest request = {
+        .hdr = {
+            .nlmsg_len = sizeof(request),
+            .nlmsg_type = config.wgFamilyId,
+            .nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP,
+            .nlmsg_seq = 1
+        },
+        .genHdr = {
+            .cmd = WG_CMD_GET_DEVICE,
+            .version = WG_GENL_VERSION
+        },
+        .ifIndexAttr = {
+            .nla_len = sizeof(request.ifIndexAttr) + sizeof(request.ifIndex),
+            .nla_type = WGDEVICE_A_IFINDEX
+        },
+        .ifIndex = config_WG_IF_INDEX
+    };
+    struct iovec_const iov[] = { { &request, sizeof(request) } };
+    genetlink_talk(&iov[0], hc_ARRAY_LEN(iov));
+
+    struct nlattr *wgPublicKey = genetlink_findAttr(WGDEVICE_A_PUBLIC_KEY);
+    hc_MEMCPY(config.wgPublicKey, (uint8_t *)&wgPublicKey[1], 32);
+
+    char base64PublicKey[base64_ENCODE_SIZE(32)];
+    base64_encode(&base64PublicKey[0], config.wgPublicKey, 32);
+    #define config_PRINT_WG_PK_STR "Wireguard PK: "
+    struct iovec_const print[] = {
+        { hc_STR_COMMA_LEN(config_PRINT_WG_PK_STR) },
+        { &base64PublicKey[0], sizeof(base64PublicKey) },
+        { hc_STR_COMMA_LEN("\n") }
+    };
+    int64_t written = sys_writev(STDOUT_FILENO, &print[0], hc_ARRAY_LEN(print));
+    CHECK(written, RES == (sizeof(config_PRINT_WG_PK_STR) - 1) + sizeof(base64PublicKey) + 1);
 }
 
 static void config_setWgDevice(void) {
@@ -284,7 +325,7 @@ static void config_setWgDevice(void) {
             .nla_len = sizeof(request.peer1AllowedIpAddressAttr) + sizeof(request.peer1AllowedIpAddress),
             .nla_type = WGALLOWEDIP_A_IPADDR
         },
-        .peer1AllowedIpAddress = config_WG_PEER1_ADDRESS,
+        .peer1AllowedIpAddress = { 10, 123, 1, 1 },
         .peer1AllowedIpNetmaskAttr = {
             .nla_len = sizeof(request.peer1AllowedIpNetmaskAttr) + sizeof(request.peer1AllowedIpNetmask),
             .nla_type = WGALLOWEDIP_A_CIDR_MASK
@@ -293,53 +334,14 @@ static void config_setWgDevice(void) {
     };
     // Read private key.
     int32_t fd = sys_openat(-1, "/mnt/config/wg/key", O_RDONLY, 0);
+    if (fd == -ENOENT) return;
     CHECK(fd, RES > 0);
     CHECK(sys_read(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));
     debug_CHECK(sys_close(fd), RES == 0);
     struct iovec_const iov[] = { { &request, sizeof(request) } };
     genetlink_talk(&iov[0], hc_ARRAY_LEN(iov));
-}
 
-static void config_printWgPublicKey(void) {
-    struct getDeviceRequest {
-        struct nlmsghdr hdr;
-        struct genlmsghdr genHdr;
-        struct nlattr ifIndexAttr;
-        uint32_t ifIndex;
-    };
-    struct getDeviceRequest request = {
-        .hdr = {
-            .nlmsg_len = sizeof(request),
-            .nlmsg_type = config.wgFamilyId,
-            .nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP,
-            .nlmsg_seq = 1
-        },
-        .genHdr = {
-            .cmd = WG_CMD_GET_DEVICE,
-            .version = WG_GENL_VERSION
-        },
-        .ifIndexAttr = {
-            .nla_len = sizeof(request.ifIndexAttr) + sizeof(request.ifIndex),
-            .nla_type = WGDEVICE_A_IFINDEX
-        },
-        .ifIndex = config_WG_IF_INDEX
-    };
-    struct iovec_const iov[] = { { &request, sizeof(request) } };
-    genetlink_talk(&iov[0], hc_ARRAY_LEN(iov));
-
-    struct nlattr *wgPublicKey = genetlink_findAttr(WGDEVICE_A_PUBLIC_KEY);
-    hc_MEMCPY(config.wgPublicKey, (uint8_t *)&wgPublicKey[1], 32);
-
-    char base64PublicKey[base64_ENCODE_SIZE(32)];
-    base64_encode(&base64PublicKey[0], config.wgPublicKey, 32);
-    #define config_PRINT_WG_PK_STR "Wireguard PK: "
-    struct iovec_const print[] = {
-        { hc_STR_COMMA_LEN(config_PRINT_WG_PK_STR) },
-        { &base64PublicKey[0], sizeof(base64PublicKey) },
-        { hc_STR_COMMA_LEN("\n") }
-    };
-    int64_t written = sys_writev(STDOUT_FILENO, &print[0], hc_ARRAY_LEN(print));
-    CHECK(written, RES == (sizeof(config_PRINT_WG_PK_STR) - 1) + sizeof(base64PublicKey) + 1);
+    config_printWgPublicKey();
 }
 
 static void config_configure(void) {
@@ -373,9 +375,8 @@ static void config_configure(void) {
         config_IFTYPE_WIREGUARD, sizeof(config_IFTYPE_WIREGUARD),
         IFF_UP, IFF_UP
     );
+    config_addWgRoute();
     config_setWgDevice();
-    config_printWgPublicKey();
-    config_addWgPeer1Route();
 
     // Enable routing.
     fd = sys_openat(-1, "/proc/sys/net/ipv4/ip_forward", O_WRONLY, 0);

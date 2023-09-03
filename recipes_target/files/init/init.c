@@ -115,26 +115,26 @@ static int32_t handleInstallation(void) {
         numRead = sys_read(STDIN_FILENO, &buffer[buffer_DEVNAME_OFFSET], sizeof(buffer) - buffer_DEVNAME_OFFSET - 1);
         if (numRead < 0) return -4;
     }
-    if (buffer[buffer_DEVNAME_OFFSET + numRead - 1] == '\n') --numRead; // Ignore trailing newline.
-    buffer[buffer_DEVNAME_OFFSET + numRead] = '\0';
     if (sys_close(installFd) < 0) return -5;
+    if (buffer[buffer_DEVNAME_OFFSET + numRead - 1] != '\n') return -6;
+    buffer[buffer_DEVNAME_OFFSET + numRead - 1] = '\0';
 
     // Unmount boot filesystem.
-    if (sys_umount2("/mnt", 0) < 0) return -6;
+    if (sys_umount2("/mnt", 0) < 0) return -7;
 
     // Open destination fd (install device), and calculate volume id.
     int32_t destFd = sys_openat(-1, &buffer[buffer_DEVNAME_OFFSET], O_WRONLY, 0);
-    if (destFd < 0) return -7;
+    if (destFd < 0) return -8;
     struct statx statx;
     statx.stx_rdev_major = 0;
-    if (sys_statx(destFd, "", AT_EMPTY_PATH, 0, &statx) != 0) return -8;
-    if (statx.stx_rdev_major == 0) return -9; // Not a device.
+    if (sys_statx(destFd, "", AT_EMPTY_PATH, 0, &statx) != 0) return -9;
+    if (statx.stx_rdev_major == 0) return -10; // Not a device.
     uint32_t volumeId = (statx.stx_rdev_minor << 16) | statx.stx_rdev_major;
 
     // Perform installation.
     for (uint64_t totalWritten = 0; totalWritten < IMAGE_INSTALL_SIZE;) {
         int64_t read = sys_read(sourceFd, &buffer[0], buffer_DEVNAME_OFFSET);
-        if (read <= 0) return -10;
+        if (read <= 0) return -11;
 
         // Rewrite volume id.
         if (math_RANGES_OVERLAP(0x27, 0x27 + 4, totalWritten, totalWritten + (uint64_t)read)) {
@@ -145,19 +145,41 @@ static int32_t handleInstallation(void) {
         }
 
         int64_t written = sys_write(destFd, &buffer[0], read);
-        if (written != read) return -11;
+        if (written != read) return -12;
         totalWritten += (uint64_t)written;
     }
-    if (sys_close(sourceFd) != 0) return -12;
-    if (sys_close(destFd) != 0) return -13;
+    if (sys_close(sourceFd) != 0) return -13;
+    if (sys_close(destFd) != 0) return -14;
 
     // Mount destination filesystem.
-    if (sys_mount(&buffer[buffer_DEVNAME_OFFSET], "/mnt", "msdos", MS_NOATIME, NULL) != 0) return -14;
+    if (sys_mount(&buffer[buffer_DEVNAME_OFFSET], "/mnt", "msdos", MS_NOATIME, NULL) != 0) return -15;
 
     // Remove installation file.
-    if (sys_unlinkat(-1, "/mnt/install", 0) != 0) return -15;
+    if (sys_unlinkat(-1, "/mnt/install", 0) != 0) return -16;
 
     return 1; // Success!
+}
+
+static int32_t mountDisk(void) {
+    int32_t fd = sys_openat(-1, "/mnt/config/disk/dev", O_RDONLY, 0);
+    if (fd == -ENOENT) return 0;
+    if (fd < 0) return -1;
+    int32_t numRead = 0;
+    for (;;) {
+        int32_t read = (int32_t)sys_read(fd, &buffer[numRead], (int32_t)sizeof(buffer) - numRead);
+        if (read == 0) break;
+        if (read < 0) return -2;
+        numRead += read;
+    }
+    buffer[numRead] = '\0';
+    if (sys_close(fd) != 0) return -3;
+    if (sys_mkdirat(-1, "/disk", 0755) < 0) return -4;
+    int32_t status = sys_mount(&buffer[0], "/disk", "ext4", MS_NOATIME, NULL);
+    if (status != 0) {
+        debug_printNum("Failed to mount disk (", status, ")\n");
+        return -5;
+    }
+    return 0;
 }
 
 int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
@@ -192,6 +214,12 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
     if (status != 0) {
         if (status < 0) debug_printNum("Installation failed (", status, ")\n");
         else cleanExit = true; // status == 1
+        goto halt_umount;
+    }
+
+    status = mountDisk();
+    if (status < 0) {
+        debug_printNum("Failed mounting disk (", status, ")\n");
         goto halt_umount;
     }
 
@@ -237,6 +265,12 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
     }
 
     halt_umount:
+    if (sys_faccessat(-1, "/disk", 0) == 0) {
+        if (sys_umount2("/disk", 0) < 0) {
+            sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Failed to umount /disk\n"));
+            cleanExit = false;
+        }
+    }
     if (sys_umount2("/mnt", 0) < 0) {
         sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Failed to umount /mnt\n"));
         cleanExit = false;

@@ -26,8 +26,3 @@ if test $# -ge 1; then
     # Yes, create install file.
     echo -n "$1" | mcopy -i "$script_dir/disk.img" - ::/install
 fi
-
-# Generate a wireguard key. TODO: remove
-mmd -i "$script_dir/disk.img" ::/config
-mmd -i "$script_dir/disk.img" ::/config/wg
-dd if=/dev/urandom bs=32 count=1 | mcopy -i "$script_dir/disk.img" - ::/config/wg/key

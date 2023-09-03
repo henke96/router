@@ -1,3 +1,5 @@
+#define ksmb_DISK_PATH "/disk"
+
 struct ksmb {
     int32_t netlinkFd;
     uint16_t familyId;
@@ -107,7 +109,10 @@ static void ksmb_onNetlinkFd(void) {
             struct ksmbd_tree_connect_request *request = (void *)&attr[1];
 
             uint16_t status = KSMBD_TREE_CONN_STATUS_NO_SHARE;
-            if (util_cstrCmp(&request->share[0], "config") == 0) status = KSMBD_TREE_CONN_STATUS_OK;
+            if (
+                util_cstrCmp(&request->share[0], "config") == 0 ||
+                (util_cstrCmp(&request->share[0], "disk") == 0 && sys_faccessat(-1, ksmb_DISK_PATH, 0) == 0)
+            ) status = KSMBD_TREE_CONN_STATUS_OK;
 
             struct {
                 struct nlmsghdr hdr;
@@ -162,7 +167,7 @@ static void ksmb_onNetlinkFd(void) {
                 },
                 .response = {
                     .handle = request->handle,
-                    .flags = KSMBD_SHARE_FLAG_AVAILABLE | KSMBD_SHARE_FLAG_BROWSEABLE | KSMBD_SHARE_FLAG_WRITEABLE,
+                    .flags = 0,
                     .create_mask = 0744,
                     .directory_mask = 0755,
                     .force_create_mode = 0,
@@ -171,8 +176,14 @@ static void ksmb_onNetlinkFd(void) {
                     .force_gid = (uint16_t)-1,
                     .veto_list_sz = 0,
                 },
-                .path = "/mnt"
             };
+            if (util_cstrCmp(&request->share_name[0], "config") == 0) {
+                hc_MEMCPY(&shareResponse.path[0], hc_STR_COMMA_LEN("/mnt"));
+                shareResponse.response.flags = KSMBD_SHARE_FLAG_AVAILABLE | KSMBD_SHARE_FLAG_BROWSEABLE | KSMBD_SHARE_FLAG_WRITEABLE;
+            } else if (util_cstrCmp(&request->share_name[0], "disk") == 0) {
+                hc_MEMCPY(&shareResponse.path[0], hc_STR_COMMA_LEN("/disk"));
+                shareResponse.response.flags = KSMBD_SHARE_FLAG_AVAILABLE | KSMBD_SHARE_FLAG_BROWSEABLE | KSMBD_SHARE_FLAG_WRITEABLE;
+            }
             struct iovec_const iov[] = { { &shareResponse, sizeof(shareResponse) } };
             netlink_talk(ksmb.netlinkFd, &iov[0], hc_ARRAY_LEN(iov));
             break;
@@ -182,4 +193,12 @@ static void ksmb_onNetlinkFd(void) {
 
 static void ksmb_deinit(void) {
     debug_CHECK(sys_close(ksmb.netlinkFd), RES == 0);
+
+    // Attempt to stop server.
+    int32_t killServerFd = sys_openat(-1, "/sys/class/ksmbd-control/kill_server", O_WRONLY, 0);
+    debug_ASSERT(killServerFd >= 0);
+    if (killServerFd >= 0) {
+        debug_CHECK(sys_write(killServerFd, hc_STR_COMMA_LEN("hard")), RES == 4);
+        debug_CHECK(sys_close(killServerFd), RES == 0);
+    }
 }

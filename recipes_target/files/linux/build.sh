@@ -1,1 +1,0 @@
-KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64 LLVM=1 HOSTCFLAGS="-I$script_dir/../recipes_host/elfutils/include" HOSTLDFLAGS="-rpath $script_dir/../recipes_host/elfutils/lib -L$script_dir/../recipes_host/elfutils/lib" make -j$NUM_CPUS
