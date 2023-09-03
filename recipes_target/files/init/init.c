@@ -174,10 +174,15 @@ static int32_t mountDisk(void) {
     buffer[numRead] = '\0';
     if (sys_close(fd) != 0) return -3;
     if (sys_mkdirat(-1, "/disk", 0755) < 0) return -4;
-    int32_t status = sys_mount(&buffer[0], "/disk", "ext4", MS_NOATIME, NULL);
-    if (status != 0) {
-        debug_printNum("Failed to mount disk (", status, ")\n");
-        return -5;
+    int32_t status;
+    for (;;) {
+        status = sys_mount(&buffer[0], "/disk", "ext4", MS_NOATIME, NULL);
+        if (status == 0) break;
+        if (status != -ENOENT) {
+            debug_printNum("Failed to mount disk (", status, ")\n");
+            return -5;
+        }
+        if (sys_clock_nanosleep(CLOCK_MONOTONIC, 0, &(struct timespec) { .tv_nsec = 100000000 }, NULL) != 0) return -6;
     }
     return 0;
 }
