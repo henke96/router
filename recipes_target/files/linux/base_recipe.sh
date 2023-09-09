@@ -7,7 +7,8 @@ FILE_DEPENDENCIES="files/linux/initramfs files/linux/.config files/linux/regulat
 
 recipe_start
 cp ../files/linux/.config .config
-KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64 LLVM=1 HOSTCFLAGS="-I$SCRIPT_DIR/../recipes_host/elfutils/include" HOSTLDFLAGS="-rpath $SCRIPT_DIR/../recipes_host/elfutils/lib -L$SCRIPT_DIR/../recipes_host/elfutils/lib" make -j$NUM_CPUS
-mkdir ../$RECIPE_NAME
-mv arch/x86/boot/bzImage ../$RECIPE_NAME/
+export KBUILD_BUILD_TIMESTAMP="@" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64
+make -j "$NUM_CPUS" CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump READELF=llvm-readelf HOSTCFLAGS="-I$SCRIPT_DIR/../recipes_host/elfutils/include" HOSTLDFLAGS="-Wl,-rpath,$SCRIPT_DIR/../recipes_host/elfutils/lib -L$SCRIPT_DIR/../recipes_host/elfutils/lib"
+mkdir "../$RECIPE_NAME"
+mv arch/x86/boot/bzImage "../$RECIPE_NAME/"
 recipe_finish
