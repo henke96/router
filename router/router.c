@@ -14,7 +14,7 @@
 
 // Shared buffer space for whole program.
 static char buffer[66000] hc_ALIGNED(16); // Netlink wants 8192, see NLMSG_GOODSIZE in <linux/netlink.h>.
-                                         // packetDumper wants to support jumbo frames, so use 66000 to be (very) safe.
+                                          // packetDumper wants to support jumbo frames, so use 66000 to be (very) safe.
 
 static void epollAdd(int32_t epollFd, int32_t fd) {
     int32_t status = sys_epoll_ctl(
