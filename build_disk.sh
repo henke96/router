@@ -6,19 +6,9 @@
 set -e
 script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
 
-# Can be `debug` or `release`.
-export BUILD_TYPE="${BUILD_TYPE:-debug}"
-
-if test "$BUILD_TYPE" = "debug"; then
-    disk_recipe=disk-debug
-elif test "$BUILD_TYPE" = "release"; then
-    disk_recipe=disk
-else
-    echo "Invalid BUILD_TYPE"
-    exit 1
-fi
-"$script_dir/recipes_target/$disk_recipe.sh"
-cp "$script_dir/recipes_target/$disk_recipe/disk.img" "$script_dir/"
+"$script_dir/recipes_target/disk.sh"
+cp "$script_dir/recipes_target/disk/disk.img" "$script_dir/"
+cp "$script_dir/recipes_target/disk/debug.disk.img" "$script_dir/"
 
 export PATH="$script_dir/recipes_host/mtools/bin:$PATH"
 # Check if creating installer image or not.

@@ -8,6 +8,17 @@ cleanup() {
     ip link del qemu1
     ip link del qemu2
     ip link del qemu3
+    ip link del qemu4
+    ip link del qemu5
+    ip link del qemu6
+    ip link del qemu7
+    ip link del qemu8
+}
+
+add_nic() {
+    ip tuntap add mode tap qemu$1
+    ip link set qemu$1 up
+    qemu_args="$qemu_args -netdev tap,id=net$1,ifname=qemu$1,script=no,downscript=no -device e1000,netdev=net$1"
 }
 
 if test ! -f "$script_dir/disk2.img"; then
@@ -28,18 +39,16 @@ else
 fi
 ip link set qemu1 up
 
-# NIC 2
-ip tuntap add mode tap qemu2
-ip link set qemu2 up
-qemu_args="$qemu_args -netdev tap,id=net2,ifname=qemu2,script=no,downscript=no -device e1000,netdev=net2"
-
-# NIC 3
-ip tuntap add mode tap qemu3
-ip link set qemu3 up
-qemu_args="$qemu_args -netdev tap,id=net3,ifname=qemu3,script=no,downscript=no -device e1000,netdev=net3"
+add_nic 2
+add_nic 3
+add_nic 4
+add_nic 5
+add_nic 6
+add_nic 7
+add_nic 8
 
 qemu-system-x86_64 \
 -bios /usr/share/qemu/OVMF.fd \
--drive format=raw,file="$script_dir/disk.img" \
+-drive format=raw,file="$script_dir/${DISK_PREFIX}disk.img" \
 -drive format=raw,file="$script_dir/disk2.img",if=none,id=disk2 -device ahci,id=ahci -device ide-hd,drive=disk2,bus=ahci.0 \
 -enable-kvm $qemu_args

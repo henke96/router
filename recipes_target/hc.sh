@@ -8,6 +8,6 @@ FILE_DEPENDENCIES="$(find ../hc/src -name "*.c" -print -o -name "*.h" -print)"
 
 recipe_start
 cd ..
-mv temp hc
-cd hc
+mv "$SOURCE_DIR_NAME" "$RECIPE_NAME"
+cd "$RECIPE_NAME"
 recipe_finish

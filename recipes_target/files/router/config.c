@@ -3,6 +3,8 @@
 
 #define config_WAN_IF_NAME "wan"
 #define config_WAN_IF_INDEX 100
+#define config_LAN_IF_NAME "lan"
+#define config_LAN_IF_INDEX 101
 
 #define config_WG_IF_NAME "wg0"
 #define config_WG_IF_INDEX 123
@@ -53,29 +55,6 @@ static void config_addIpv4(uint8_t ifIndex, uint8_t *address, uint8_t prefixLen)
         }
     };
     hc_MEMCPY(&request.address, address, sizeof(request.address));
-    struct iovec_const iov[] = { { &request, sizeof(request) } };
-    netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
-}
-
-static void config_setFlags(int32_t ifIndex, uint32_t flags, uint32_t flagsMask) {
-    struct linkRequest {
-        struct nlmsghdr hdr;
-        struct ifinfomsg ifInfo;
-    };
-    struct linkRequest request = {
-        .hdr = {
-            .nlmsg_len = sizeof(request),
-            .nlmsg_type = RTM_NEWLINK,
-            .nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK,
-        },
-        .ifInfo = {
-            .ifi_family = AF_UNSPEC,
-            .ifi_type = 0,
-            .ifi_index = ifIndex,
-            .ifi_flags = flags,
-            .ifi_change = flagsMask
-        }
-    };
     struct iovec_const iov[] = { { &request, sizeof(request) } };
     netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
 }
@@ -362,11 +341,29 @@ static void config_configure(void) {
     config_setMaster(2, config_WAN_IF_INDEX, IFF_UP, IFF_UP);
     // eth1
     config_setMaster(3, config_WAN_IF_INDEX, IFF_UP, IFF_UP);
-
     // eth2
-    uint8_t if3Address[] = { 10, 123, 0, 1 };
-    config_addIpv4(4, &if3Address[0], 24);
-    config_setFlags(4, IFF_UP, IFF_UP);
+    config_setMaster(4, config_WAN_IF_INDEX, IFF_UP, IFF_UP);
+    // eth3
+    config_setMaster(5, config_WAN_IF_INDEX, IFF_UP, IFF_UP);
+
+    // lan
+    config_addIf(
+        config_LAN_IF_INDEX,
+        config_LAN_IF_NAME, sizeof(config_LAN_IF_NAME),
+        config_IFTYPE_BRIDGE, sizeof(config_IFTYPE_BRIDGE),
+        IFF_UP, IFF_UP
+    );
+    uint8_t lanAddress[] = { 10, 123, 0, 1 };
+    config_addIpv4(config_LAN_IF_INDEX, &lanAddress[0], 24);
+
+    // eth4
+    config_setMaster(6, config_LAN_IF_INDEX, IFF_UP, IFF_UP);
+    // eth5
+    config_setMaster(7, config_LAN_IF_INDEX, IFF_UP, IFF_UP);
+    // eth6
+    config_setMaster(8, config_LAN_IF_INDEX, IFF_UP, IFF_UP);
+    // eth7
+    config_setMaster(9, config_LAN_IF_INDEX, IFF_UP, IFF_UP);
 
     // wg0
     config_addIf(

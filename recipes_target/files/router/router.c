@@ -8,11 +8,12 @@
 #include "hc/linux/sys.c"
 #include "hc/linux/debug.c"
 #include "hc/linux/helpers/_start.c"
+#include "hc/linux/helpers/sys_clone3_func.c"
 
 #define CHECK(EXPR, COND) do { typeof(EXPR) RES = (EXPR); if (!(COND)) debug_fail((int64_t)RES, #EXPR, __FILE_NAME__, __LINE__); } while (0)
 
 // Shared buffer space for whole program.
-static char buffer[66000] hc_ALIGNED(8); // Netlink wants 8192, see NLMSG_GOODSIZE in <linux/netlink.h>.
+static char buffer[66000] hc_ALIGNED(16); // Netlink wants 8192, see NLMSG_GOODSIZE in <linux/netlink.h>.
                                          // packetDumper wants to support jumbo frames, so use 66000 to be (very) safe.
 
 static void epollAdd(int32_t epollFd, int32_t fd) {
@@ -36,6 +37,7 @@ static void epollAdd(int32_t epollFd, int32_t fd) {
 #include "iptables.c"
 #include "packetDumper.c"
 #include "modemClient.c"
+#include "hostapd.c"
 
 int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **envp) {
     genetlink_init();
@@ -45,13 +47,14 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
     config_init();
 
     config_configure();
+    hostapd_init();
 
     dhcpClient_init();
     iptables_configure();
 
     struct dhcpServer dhcpServer;
     uint8_t lanIp[4] hc_ALIGNED(4) = { 10, 123, 0, 1 };
-    dhcpServer_init(&dhcpServer, 4, *(uint32_t *)&lanIp[0]);
+    dhcpServer_init(&dhcpServer, config_LAN_IF_INDEX, *(uint32_t *)&lanIp[0]);
 
     struct packetDumper wanDumper;
     packetDumper_init(&wanDumper, config_WAN_IF_INDEX);
@@ -64,6 +67,7 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
     CHECK(epollFd, RES > 0);
     epollAdd(epollFd, acpi.netlinkFd);
     epollAdd(epollFd, ksmb.netlinkFd);
+    if (hostapd.pidFd > 0) epollAdd(epollFd, hostapd.pidFd);
     epollAdd(epollFd, dhcpClient.fd);
     epollAdd(epollFd, dhcpClient.timerFd);
     epollAdd(epollFd, dhcpServer.fd);
@@ -75,6 +79,7 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
         event.data.fd = 0;
         CHECK(sys_epoll_pwait(epollFd, &event, 1, -1, NULL), RES == 1);
         if (event.data.fd == acpi.netlinkFd) break;
+        if (event.data.fd == hostapd.pidFd) debug_abort();
 
         if (event.data.fd == ksmb.netlinkFd) ksmb_onNetlinkFd();
         else if (event.data.fd == dhcpClient.fd) dhcpClient_onFd();
@@ -92,6 +97,7 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
     packetDumper_deinit(&wanDumper);
     dhcpServer_deinit(&dhcpServer);
     dhcpClient_deinit();
+    hostapd_deinit();
     config_deinit();
     ksmb_deinit();
     acpi_deinit();

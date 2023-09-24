@@ -8,11 +8,12 @@
 #include "hc/linux/debug.c"
 #include "hc/linux/util.c"
 #include "hc/linux/helpers/_start.c"
+#include "hc/linux/helpers/sys_clone3_func.c"
 
 #define IMAGE_INSTALL_SIZE 0x800000 // 8 MiB
 
 #define buffer_DEVNAME_OFFSET 3084
-static char buffer[4096] hc_ALIGNED(8);
+static char buffer[4096] hc_ALIGNED(16);
 
 static int32_t initialise(void) {
     if (sys_mount("", "/proc", "proc", 0, NULL) < 0) return -1;
@@ -187,7 +188,14 @@ static int32_t mountDisk(void) {
     return 0;
 }
 
-int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
+static noreturn void router(hc_UNUSED void *arg) {
+    const char *newArgv[] = { "/router", NULL };
+    const char *newEnvp[] = { NULL };
+    sys_execveat(-1, newArgv[0], &newArgv[0], &newEnvp[0], 0);
+    sys_exit_group(1);
+}
+
+int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **envp) {
     bool cleanExit = false;
     int32_t status = initialise();
     if (status < 0) {
@@ -230,14 +238,11 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
 
     struct clone_args args = {
         .flags = CLONE_VM | CLONE_VFORK,
-        .exit_signal = SIGCHLD
+        .exit_signal = SIGCHLD,
+        .stack = &buffer[0],
+        .stack_size = sizeof(buffer)
     };
-    status = sys_clone3(&args);
-    if (status == 0) {
-        const char *newArgv[] = { "/router", NULL };
-        sys_execveat(-1, newArgv[0], &newArgv[0], (const char *const *)envp, 0);
-        return 1; // Let _start exit the child.
-    }
+    status = sys_clone3_func(&args, sizeof(args), router, NULL);
     if (status < 0) goto halt_umount;
 
     // Wait for children.
