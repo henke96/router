@@ -6,7 +6,7 @@ recipe_init "../hc/bootstrap/make.sh ../hc/bootstrap/xz.sh ../recipes_host/llvm.
 
 URL="https://www.kernel.org/pub/linux/kernel/v6.x/linux-6.1.48.tar.xz"
 SHA256="c606cbd0353e677df6fae73cc16ba3c9244b98372ed7771d551024016f55ac31"
-FILE_DEPENDENCIES="files/linux/initramfs files/linux/.config files/linux/regulatory.db files/hostapd/hostapd.conf"
+FILE_DEPENDENCIES="files/linux/initramfs files/linux/.config files/linux/regulatory.db"
 
 recipe_start
 mkdir ../$RECIPE_NAME
@@ -20,7 +20,6 @@ cp ../files/linux/.config .config
 touch -t 197001010000.00 ../linux-firmware/iwlwifi-cc-a0-72.ucode
 touch -t 197001010000.00 ../files/linux/regulatory.db
 touch -t 197001010000.00 ../hostapd/hostapd
-touch -t 197001010000.00 ../files/hostapd/hostapd.conf
 touch -t 197001010000.00 ../init/$ARCH/init.elf
 touch -t 197001010000.00 ../init/$ARCH/debug.init.elf
 touch -t 197001010000.00 ../router/$ARCH/router.elf
