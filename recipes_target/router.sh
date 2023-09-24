@@ -5,11 +5,11 @@ cd -- "$(dirname -- "$0")"
 
 recipe_init "../recipes_host/llvm.sh ./hc.sh"
 
-FILE_DEPENDENCIES="$(find files/router -name "*.c" -print -o -name "*.h" -print)"
+FILE_DEPENDENCIES="$(find ../router -name "*.c" -print -o -name "*.h" -print)"
 
 recipe_start
 export NO_AARCH64=1 NO_RISCV64=1
-../../hc/tools/build/elf.sh ../files/router router
+../../hc/tools/build/elf.sh ../../router router
 mkdir ../router
-mv ../files/router/x86_64 ../router/
+mv ../../router/x86_64 ../router/
 recipe_finish

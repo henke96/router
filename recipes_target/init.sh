@@ -4,11 +4,11 @@ cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
 recipe_init "../recipes_host/llvm.sh ./hc.sh"
 
-FILE_DEPENDENCIES="$(find files/init -name "*.c" -print -o -name "*.h" -print)"
+FILE_DEPENDENCIES="$(find ../init -name "*.c" -print -o -name "*.h" -print)"
 
 recipe_start
 export NO_AARCH64=1 NO_RISCV64=1
-../../hc/tools/build/elf.sh ../files/init init
+../../hc/tools/build/elf.sh ../../init init
 mkdir ../init
-mv ../files/init/x86_64 ../init/
+mv ../../init/x86_64 ../init/
 recipe_finish
