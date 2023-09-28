@@ -1,5 +1,6 @@
 #include "hc/hc.h"
 #include "hc/debug.h"
+#include "hc/mem.c"
 #include "hc/math.c"
 #include "hc/util.c"
 #include "hc/base64.c"
@@ -58,6 +59,8 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
 
     struct packetDumper wanDumper;
     packetDumper_init(&wanDumper, config_WAN_IF_INDEX);
+    struct packetDumper lanDumper;
+    packetDumper_init(&lanDumper, config_LAN_IF_INDEX);
 
     struct modemClient modemClient;
     modemClient_init(&modemClient, "/dev/ttyUSB2");
@@ -72,6 +75,7 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
     epollAdd(epollFd, dhcpClient.timerFd);
     epollAdd(epollFd, dhcpServer.fd);
     epollAdd(epollFd, wanDumper.listenFd);
+    epollAdd(epollFd, lanDumper.listenFd);
     epollAdd(epollFd, modemClient.timerFd);
 
     for (;;) {
@@ -88,12 +92,16 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
         else if (event.data.fd == wanDumper.listenFd) packetDumper_onListenFd(&wanDumper, epollFd);
         else if (event.data.fd == wanDumper.packetFd) packetDumper_onPacketFd(&wanDumper);
         else if (event.data.fd == wanDumper.clientFd) packetDumper_onClientFd(&wanDumper);
+        else if (event.data.fd == lanDumper.listenFd) packetDumper_onListenFd(&lanDumper, epollFd);
+        else if (event.data.fd == lanDumper.packetFd) packetDumper_onPacketFd(&lanDumper);
+        else if (event.data.fd == lanDumper.clientFd) packetDumper_onClientFd(&lanDumper);
         else if (event.data.fd == modemClient.timerFd) modemClient_onTimerFd(&modemClient, epollFd);
         else if (event.data.fd == modemClient.fd) modemClient_onFd(&modemClient);
         else debug_ASSERT(0);
     }
 
     modemClient_deinit(&modemClient);
+    packetDumper_deinit(&lanDumper);
     packetDumper_deinit(&wanDumper);
     dhcpServer_deinit(&dhcpServer);
     dhcpClient_deinit();
