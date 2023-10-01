@@ -1,32 +1,45 @@
-#define modemClient_cmd_HEADER_SIZE 2
-#define modemClient_cmd_CONSTANT 0
-#define modemClient_cmd_START_SMS 1
-#define modemClient_cmd_SEND_SMS 2
+#define modemClient_NO_CMD 0
+#define modemClient_CONSTANT 1
+#define modemClient_START_SMS 2
+#define modemClient_SEND_SMS 3
 
-struct modemClient_cmd {
-    uint8_t type;
-    uint8_t dataSize;
-    char data[];
+struct modemClient_constant {
+    uint8_t tag;
+    uint16_t constantLength;
+    const char *constant;
+} hc_PACKED(1);
+// Disable echo, set sms to text mode, enable extended sms info.
+#define modemClient_INIT_CMD "ATE0;+CMGF=1;+CSDH=1;+CSCS=\"UCS2\"\r"
+// Delete all messages except unread, list all messages.
+#define modemClient_SMS_POLL_CMD "AT+CMGD=,3;+CMGL=\"REC UNREAD\"\r"
+
+struct modemClient_startSms {
+    uint8_t tag;
+    uint8_t numberSize;
+    char number[];
 };
 
-struct modemClient_cmd_constant {
-    uint8_t type;
-    uint8_t dataSize;
-    uint8_t cmdLength;
-    char __pad[5];
-    const char *cmd;
-};
+struct modemClient_sendSms {
+    uint8_t tag;
+    uint16_t smsSize;
+    char sms[];
+} hc_PACKED(1);
 
 struct modemClient {
     const char *path;
     int32_t fd; // -1 if not connected.
     int32_t timerFd;
-    int32_t bufferLength;
-    int32_t commandQueueLength;
+    int32_t receivedSize;
+    int32_t commandQueueSize;
     char buffer[4096];
-    char commandQueue[4096];
-
+    char commandQueue[4103];
+    bool pendingCommand;
 };
+
+static hc_INLINE uint8_t modemClient_pendingCmdTag(struct modemClient *self) {
+    debug_ASSERT(!self->pendingCommand || self->commandQueueSize > 0);
+    return self->pendingCommand ? self->commandQueue[0] : modemClient_NO_CMD;
+}
 
 static void modemClient_init(struct modemClient *self, const char *path) {
     self->path = path;
@@ -34,70 +47,121 @@ static void modemClient_init(struct modemClient *self, const char *path) {
     self->timerFd = sys_timerfd_create(CLOCK_MONOTONIC, 0);
     CHECK(self->timerFd, RES > 0);
 
-    struct itimerspec timeout = { .it_value = { .tv_sec = 5 } };
+    struct itimerspec timeout = { .it_value = { .tv_sec = 20 } };
     CHECK(sys_timerfd_settime(self->timerFd, 0, &timeout, NULL), RES == 0);
-
 }
 
 static void modemClient_disconnect(struct modemClient *self) {
     if (self->fd > 0) {
         sys_write(self->fd, hc_STR_COMMA_LEN("\x1b")); // Attempt to exit potential `> `-mode by sending escape.
+        debug_printNum("AT disconnect (", modemClient_pendingCmdTag(self), ")\n");
+
         debug_CHECK(sys_close(self->fd), RES == 0);
         self->fd = -1;
-        sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("AT disconnect\n"));
     }
 }
 
 static int32_t modemClient_processQueue(struct modemClient *self) {
-    debug_ASSERT(self->commandQueueLength > 0);
-    struct modemClient_cmd *cmd = (void *)&self->commandQueue[0];
-    switch (cmd->type) {
-        case modemClient_cmd_CONSTANT: {
-            struct modemClient_cmd_constant *cmdConstant = (void *)&self->commandQueue[0];
-            int64_t written = sys_write(self->fd, cmdConstant->cmd, cmdConstant->cmdLength);
-            if (written != cmdConstant->cmdLength) return -1;
+    if (self->pendingCommand || self->commandQueueSize == 0) return 0;
+
+    uint8_t tag = self->commandQueue[0];
+    switch (tag) {
+        case modemClient_CONSTANT: {
+            struct modemClient_constant *cmd = (void *)&self->commandQueue[0];
+            int64_t written = sys_write(self->fd, cmd->constant, cmd->constantLength);
+            if (written != cmd->constantLength) return -1;
             break;
         }
-        case modemClient_cmd_START_SMS: {
+        case modemClient_START_SMS: {
+            struct modemClient_startSms *cmd = (void *)&self->commandQueue[0];
             #define modemClient_START_SMS_CMD "AT+CMGS=\""
             struct iovec_const iov[] = {
                 { hc_STR_COMMA_LEN(modemClient_START_SMS_CMD) },
-                { &cmd->data[0], cmd->dataSize },
+                { &cmd->number[0], cmd->numberSize },
                 { hc_STR_COMMA_LEN("\"\r") }
             };
             int64_t written = sys_writev(self->fd, &iov[0], hc_ARRAY_LEN(iov));
-            if (written != (sizeof(modemClient_START_SMS_CMD) - 1) + cmd->dataSize + 2) return -1;
+            if (written != (sizeof(modemClient_START_SMS_CMD) - 1) + cmd->numberSize + 2) return -1;
             break;
         }
-        case modemClient_cmd_SEND_SMS: {
+        case modemClient_SEND_SMS: {
+            struct modemClient_sendSms *cmd = (void *)&self->commandQueue[0];
             struct iovec_const iov[] = {
-                { &cmd->data[0], cmd->dataSize },
+                { &cmd->sms[0], cmd->smsSize },
                 { hc_STR_COMMA_LEN("\x1a") }
             };
             int64_t written = sys_writev(self->fd, &iov[0], hc_ARRAY_LEN(iov));
-            if (written != cmd->dataSize + 1) return -1;
+            if (written != cmd->smsSize + 1) return -1;
             break;
         }
         default: hc_UNREACHABLE;
     }
+    self->pendingCommand = true;
     struct itimerspec timeout = { .it_value = { .tv_sec = 10 } };
     CHECK(sys_timerfd_settime(self->timerFd, 0, &timeout, NULL), RES == 0);
     return 0;
 }
 
-static int32_t modemClient_queueSmsPoll(struct modemClient *self) {
-    #define modemClient_SMS_POLL_CMD "AT+CMGD=,3;+CMGL=\"ALL\"\r"
-    struct modemClient_cmd_constant *cmd = (void *)&self->commandQueue[self->commandQueueLength];
-    self->commandQueueLength += sizeof(*cmd);
-    if (self->commandQueueLength >= (int32_t)sizeof(self->commandQueue)) return -1;
-    cmd->type = modemClient_cmd_CONSTANT;
-    cmd->dataSize = sizeof(*cmd) - modemClient_cmd_HEADER_SIZE;
-    cmd->cmdLength = sizeof(modemClient_SMS_POLL_CMD) - 1;
-    cmd->cmd = modemClient_SMS_POLL_CMD;
-    if (self->commandQueueLength == sizeof(*cmd)) {
-        if (modemClient_processQueue(self) < 0) return -1;
+static int32_t modemClient_queueConstant(struct modemClient *self, const char *constant, uint16_t constantLength) {
+    struct modemClient_constant *cmd;
+    if (self->commandQueueSize > (int32_t)(sizeof(self->commandQueue) - sizeof(*cmd))) return -1;
+
+    cmd = (void *)&self->commandQueue[self->commandQueueSize];
+    cmd->tag = modemClient_CONSTANT;
+    cmd->constantLength = constantLength;
+    cmd->constant = constant;
+    self->commandQueueSize += sizeof(*cmd);
+
+    return modemClient_processQueue(self);
+}
+
+static int32_t modemClient_queueSms(struct modemClient *self, const char *number, uint8_t numberSize, const char *sms, uint16_t smsSize) {
+    struct modemClient_startSms *startCmd;
+    int32_t startCmdSize = (sizeof(*startCmd) + numberSize);
+    struct modemClient_sendSms *sendCmd;
+    int32_t sendCmdSize = (sizeof(*sendCmd) + smsSize);
+    if (self->commandQueueSize > (int32_t)sizeof(self->commandQueue) - startCmdSize - sendCmdSize) return -1;
+
+    startCmd = (void *)&self->commandQueue[self->commandQueueSize];
+    startCmd->tag = modemClient_START_SMS;
+    startCmd->numberSize = numberSize;
+    hc_MEMCPY(&startCmd->number[0], number, numberSize);
+    self->commandQueueSize += startCmdSize;
+
+    sendCmd = (void *)&self->commandQueue[self->commandQueueSize];
+    sendCmd->tag = modemClient_SEND_SMS;
+    sendCmd->smsSize = smsSize;
+    hc_MEMCPY(&sendCmd->sms[0], sms, smsSize);
+    self->commandQueueSize += sendCmdSize;
+
+    return modemClient_processQueue(self);
+}
+
+static int32_t modemClient_ackPending(struct modemClient *self) {
+    debug_ASSUME(self->pendingCommand);
+    uint8_t tag = modemClient_pendingCmdTag(self);
+
+    int32_t ackSize;
+    switch (tag) {
+        case modemClient_CONSTANT: ackSize = sizeof(struct modemClient_constant); break;
+        case modemClient_START_SMS: {
+            struct modemClient_startSms *cmd = (void *)&self->commandQueue[0];
+            ackSize = sizeof(*cmd) + cmd->numberSize;
+            break;
+        }
+        case modemClient_SEND_SMS: {
+            struct modemClient_sendSms *cmd = (void *)&self->commandQueue[0];
+            ackSize = sizeof(*cmd) + cmd->smsSize;
+            break;
+        }
+        default: hc_UNREACHABLE;
     }
-    return 0;
+    debug_ASSERT(self->commandQueueSize >= ackSize);
+    self->commandQueueSize -= ackSize;
+    hc_MEMMOVE(&self->commandQueue[0], &self->commandQueue[ackSize], (uint64_t)self->commandQueueSize);
+    self->pendingCommand = false;
+
+    return modemClient_processQueue(self);
 }
 
 static void modemClient_onTimerFd(struct modemClient *self, int32_t epollFd) {
@@ -116,21 +180,17 @@ static void modemClient_onTimerFd(struct modemClient *self, int32_t epollFd) {
         termios.c_lflag &= ~(ISIG | ICANON | ECHO | IEXTEN);
         if (sys_ioctl(self->fd, TCSETS, &termios) != 0) goto out_fail;
 
-        // Send escape, enable echo, set sms to text mode, extended sms info.
-        #define modemClient_INIT_CMDS "ATE0;+CMGF=1;+CSDH=1\r"
-        struct modemClient_cmd_constant *cmd = (void *)&self->commandQueue[0];
-        cmd->type = modemClient_cmd_CONSTANT;
-        cmd->dataSize = sizeof(*cmd) - modemClient_cmd_HEADER_SIZE;
-        cmd->cmdLength = sizeof(modemClient_INIT_CMDS) - 1;
-        cmd->cmd = modemClient_INIT_CMDS;
-        self->commandQueueLength = sizeof(*cmd);
-        self->bufferLength = 0;
+        self->receivedSize = 0;
+        self->commandQueueSize = 0;
+        self->pendingCommand = false;
+        if (modemClient_queueConstant(self, hc_STR_COMMA_LEN(modemClient_INIT_CMD)) < 0) goto out_fail;
 
         epollAdd(epollFd, self->fd);
-    } else if (self->commandQueueLength > 0) goto out_fail; // Some command timed out.
+    } else if (self->pendingCommand) goto out_fail; // Some command timed out.
 
-    debug_CHECK(modemClient_queueSmsPoll(self), RES == 0); // Should impossibly fail here.
-    if (modemClient_processQueue(self) == 0) return;
+    // Poll for SMS.
+    if (modemClient_queueConstant(self, hc_STR_COMMA_LEN(modemClient_SMS_POLL_CMD)) < 0) goto out_fail;
+    return;
 
     out_fail:
     modemClient_disconnect(self);
@@ -141,20 +201,21 @@ static void modemClient_onTimerFd(struct modemClient *self, int32_t epollFd) {
 static void modemClient_onFd(struct modemClient *self) {
     int32_t lineStart = 0;
 
-    int64_t read = sys_read(self->fd, &self->buffer[self->bufferLength], (int32_t)sizeof(self->buffer) - self->bufferLength);
+    int64_t read = sys_read(self->fd, &self->buffer[self->receivedSize], (int32_t)sizeof(self->buffer) - self->receivedSize);
     if (read <= 0) goto out_fail;
-    self->bufferLength += read;
+    self->receivedSize += read;
 
+    uint8_t pendingCmdTag = modemClient_pendingCmdTag(self);
     int32_t lineLength;
     for (;; lineStart += lineLength + 1) {
         char *bufferLineStart = &self->buffer[lineStart];
 
-        // Find line length.
-        for (lineLength = 0; lineLength < self->bufferLength - lineStart; ++lineLength) {
+        // Find line length, excluding new line.
+        for (lineLength = 0; lineLength < self->receivedSize - lineStart; ++lineLength) {
             if (bufferLineStart[lineLength] == '\n') goto foundLine;
         }
         if (lineLength != 2 || bufferLineStart[0] != '>' || bufferLineStart[1] != ' ') goto out; // No line found.
-        foundLine:
+        foundLine:;
 
         // OK or `> `.
         if (
@@ -164,26 +225,20 @@ static void modemClient_onFd(struct modemClient *self) {
                 (bufferLineStart[0] == '>' && bufferLineStart[1] == ' ')
             )
         ) {
-            struct modemClient_cmd *cmd = (void *)&self->commandQueue[0];
-            if (self->commandQueueLength <= 0) goto out_fail;
+            if (pendingCmdTag == modemClient_NO_CMD) goto out_fail;
 
             if (bufferLineStart[0] == '>') {
-                if (cmd->type != modemClient_cmd_START_SMS) goto out_fail;
-                --lineLength; // Compensate for missing newline..
-            } else if (cmd->type == modemClient_cmd_START_SMS) goto out_fail;
+                if (pendingCmdTag != modemClient_START_SMS) goto out_fail;
+                --lineLength; // `> ` doesn't have a newline, so compensate here.
+            } else if (pendingCmdTag == modemClient_START_SMS) goto out_fail;
 
-            int32_t commandLength = modemClient_cmd_HEADER_SIZE + cmd->dataSize;
-            self->commandQueueLength -= commandLength;
-            hc_MEMMOVE(&self->commandQueue[0], &self->commandQueue[commandLength], (uint64_t)self->commandQueueLength);
-            if (self->commandQueueLength > 0) {
-                if (modemClient_processQueue(self) < 0) goto out_fail;
-            }
+            if (modemClient_ackPending(self) < 0) goto out_fail;
             continue;
         }
 
         // Error.
         if (lineLength == 5 && hc_MEMCMP(&bufferLineStart[0], hc_STR_COMMA_LEN("ERROR")) == 0) {
-            sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("AT error!\n"));
+            sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("AT error\n"));
             goto out_fail;
         }
 
@@ -197,13 +252,8 @@ static void modemClient_onFd(struct modemClient *self) {
             goto out_fail; // Not found.
             foundSlotNumberEnd:;
 
-            // Parse whether the message is read or unread.
-            int32_t unreadCheckIndex = slotNumberEnd + 6;
-            if (unreadCheckIndex >= lineLength) goto out_fail;
-            bool unread = bufferLineStart[unreadCheckIndex] == 'U'; // "REC UNREAD" or "REC READ"
-
             // Find start of sender number.
-            int32_t senderNumberIndex = unreadCheckIndex + (unread ? 9 : 7);
+            int32_t senderNumberIndex = slotNumberEnd + 15;
 
             // Find end of sender number.
             int32_t senderNumberEnd = senderNumberIndex;
@@ -225,50 +275,57 @@ static void modemClient_onFd(struct modemClient *self) {
             uint64_t smsLength;
             int32_t parsed = util_strToUint(&bufferLineStart[smsLengthIndex], lineLength - smsLengthIndex, &smsLength);
             if (parsed <= 0) goto out_fail;
+            int32_t smsContentIndex = lineLength + 1;
 
-            // Add the SMS contents to the "line" length.
-            lineLength += smsLength + 1;
+            // Check if we have received the whole SMS and newline. Very ugly check..
+            if (smsLength > (uint64_t)((self->receivedSize - smsContentIndex - 1) / 4)) goto out; // Nope.
 
-            // Check if we have received the whole SMS.
-            if (lineLength + 1 >= self->bufferLength - lineStart) goto out; // Nope.
+            uint64_t smsSize = smsLength * 4; // UCS2 + hex encoding (ex: "ab" => "00610062").
 
-            if (unread) {
-                uint8_t senderNumberLength = (uint8_t)(senderNumberEnd - senderNumberIndex);
-                struct modemClient_cmd *cmd = (void *)&self->commandQueue[self->commandQueueLength];
-                int32_t cmdLength = modemClient_cmd_HEADER_SIZE + senderNumberLength;
-                self->commandQueueLength += cmdLength;
-                if (self->commandQueueLength >= (int32_t)sizeof(self->commandQueue)) goto out_fail;
-                cmd->type = modemClient_cmd_START_SMS;
-                cmd->dataSize = senderNumberLength;
-                hc_MEMCPY(&cmd->data[0], &bufferLineStart[senderNumberIndex], cmd->dataSize);
-                if (self->commandQueueLength == cmdLength) {
-                    if (modemClient_processQueue(self) < 0) goto out_fail;
-                }
+            // Add the SMS size and newline to the "line" length.
+            lineLength += smsSize + 1;
 
-                char *pos = util_intToStr(&buffer[18], dhcpClient.leasedIpNetmask);
-                *--pos = '/';
-                pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[3]);
-                *--pos = '.';
-                pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[2]);
-                *--pos = '.';
-                pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[1]);
-                *--pos = '.';
-                pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[0]);
+            // Check for `ip` command.
+            if (smsLength != 2 || hc_MEMCMP(&bufferLineStart[smsContentIndex], hc_STR_COMMA_LEN("00690070")) != 0) continue;
 
-                uint8_t sendSmsLength = (uint8_t)(&buffer[18] - pos);
-                cmd = (void *)&self->commandQueue[self->commandQueueLength];
-                self->commandQueueLength += modemClient_cmd_HEADER_SIZE + sendSmsLength;
-                if (self->commandQueueLength >= (int32_t)sizeof(self->commandQueue)) goto out_fail;
-                cmd->type = modemClient_cmd_SEND_SMS;
-                cmd->dataSize = sendSmsLength;
-                hc_MEMCPY(&cmd->data[0], pos, cmd->dataSize);
+            // Respond with DHCP IP.
+            char *pos = util_intToStr(&buffer[4096], dhcpClient.leasedIpNetmask);
+            *--pos = '/';
+            pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[3]);
+            *--pos = '.';
+            pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[2]);
+            *--pos = '.';
+            pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[1]);
+            *--pos = '.';
+            pos = util_intToStr(pos, ((uint8_t *)&dhcpClient.leasedIp)[0]);
+            int32_t sendSmsLength = (int32_t)(&buffer[4096] - pos);
+
+            // Convert to UCS2 + hex encoding.
+            uint16_t *ucs2Pos = (uint16_t *)hc_ASSUME_ALIGNED(pos - sendSmsLength, 2);
+            util_strToUtf16(ucs2Pos, pos, sendSmsLength);
+            char *ucs2HexPos = (char *)(ucs2Pos - sendSmsLength);
+            for (uint16_t i = 0; i < sendSmsLength; ++i) {
+                uint16_t ch = ucs2Pos[i];
+                int32_t hexI = 4 * i;
+                ucs2HexPos[hexI] = util_hexTable[(ch >> 12) & 0xF];
+                ucs2HexPos[hexI + 1] = util_hexTable[(ch >> 8) & 0xF];
+                ucs2HexPos[hexI + 2] = util_hexTable[(ch >> 4) & 0xF];
+                ucs2HexPos[hexI + 3] = util_hexTable[ch & 0xF];
             }
+
+            if (
+                modemClient_queueSms(
+                    self,
+                    &bufferLineStart[senderNumberIndex], (uint8_t)(senderNumberEnd - senderNumberIndex),
+                    ucs2HexPos, (uint16_t)(4 * sendSmsLength)
+                ) < 0
+            ) goto out_fail;
             continue;
         }
 
         // SMS notification.
         if (lineLength >= 11 && hc_MEMCMP(&bufferLineStart[0], hc_STR_COMMA_LEN("+CMTI: \"SM\"")) == 0) {
-            if (modemClient_queueSmsPoll(self) < 0) goto out_fail;
+            if (modemClient_queueConstant(self, hc_STR_COMMA_LEN(modemClient_SMS_POLL_CMD)) < 0) goto out_fail;
             continue;
         }
     }
@@ -276,9 +333,10 @@ static void modemClient_onFd(struct modemClient *self) {
     out_fail:
     modemClient_disconnect(self);
     out:
+    if (modemClient_processQueue(self) < 0) goto out_fail;
     // Move incomplete line to start of buffer.
-    self->bufferLength -= lineStart;
-    hc_MEMMOVE(&self->buffer[0], &self->buffer[lineStart], (uint64_t)self->bufferLength);
+    self->receivedSize -= lineStart;
+    hc_MEMMOVE(&self->buffer[0], &self->buffer[lineStart], (uint64_t)self->receivedSize);
 }
 
 static void modemClient_deinit(struct modemClient *self) {
