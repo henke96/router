@@ -2,7 +2,7 @@
 set -e
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
-recipe_init "../recipes_host/llvm.sh ../hc/bootstrap/make.sh"
+recipe_init "./host_llvm.sh ../hc/bootstrap/make.sh"
 
 URL="https://musl.libc.org/releases/musl-1.2.4.tar.gz"
 SHA256="7a35eae33d5372a7c0da1188de798726f68825513b7ae3ebe97aaaa52114f039"

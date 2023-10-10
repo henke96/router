@@ -2,10 +2,10 @@
 set -e
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
-recipe_init "../hc/bootstrap/make.sh ./flex.sh"
+recipe_init "../hc/bootstrap/make.sh ./host_m4.sh"
 
-URL="https://ftp.gnu.org/gnu/bc/bc-1.06.tar.gz"
-SHA256="4ef6d9f17c3c0d92d8798e35666175ecd3d8efac4009d6457b5c99cea72c0e33"
+URL="https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz"
+SHA256="06c9e13bdf7eb24d4ceb6b59205a4f67c2c7e7213119644430fe82fbd14a0abb"
 
 recipe_start
 ./configure --prefix="$SCRIPT_DIR/$RECIPE_NAME" --disable-dependency-tracking --disable-nls --disable-yacc --without-libiconv-prefix --without-libintl-prefix --without-libreadline-prefix --without-libtextstyle-prefix

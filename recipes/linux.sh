@@ -2,7 +2,7 @@
 set -e
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
-recipe_init "../hc/bootstrap/make.sh ../hc/bootstrap/xz.sh ../recipes_host/llvm.sh ../recipes_host/bc.sh ../recipes_host/flex.sh ../recipes_host/bison.sh ../recipes_host/elfutils.sh ./linux-firmware.sh ./init.sh ./router.sh ./hostapd.sh"
+recipe_init "../hc/bootstrap/make.sh ../hc/bootstrap/xz.sh ./host_llvm.sh ./host_bc.sh ./host_flex.sh ./host_bison.sh ./host_elfutils.sh ./linux-firmware.sh ./init.sh ./router.sh ./hostapd.sh"
 
 URL="https://www.kernel.org/pub/linux/kernel/v6.x/linux-6.1.48.tar.xz"
 SHA256="c606cbd0353e677df6fae73cc16ba3c9244b98372ed7771d551024016f55ac31"
@@ -12,7 +12,7 @@ recipe_start
 mkdir ../$RECIPE_NAME
 
 export KBUILD_BUILD_TIMESTAMP="1970-01-01" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64
-export HOSTCFLAGS="-I$SCRIPT_DIR/../recipes_host/elfutils/include" HOSTLDFLAGS="-Wl,-rpath,$SCRIPT_DIR/../recipes_host/elfutils/lib -L$SCRIPT_DIR/../recipes_host/elfutils/lib"
+export HOSTCFLAGS="-I$SCRIPT_DIR/host_elfutils/include" HOSTLDFLAGS="-Wl,-rpath,$SCRIPT_DIR/host_elfutils/lib -L$SCRIPT_DIR/host_elfutils/lib"
 llvm_tools="CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump READELF=llvm-readelf"
 cp ../files/linux/.config .config
 

@@ -2,7 +2,7 @@
 set -e
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
-recipe_init "../hc/bootstrap/make.sh ../hc/bootstrap/xz.sh ../hc/bootstrap/cmake.sh ../hc/bootstrap/python.sh ../recipes_target/musl-headers.sh"
+recipe_init "../hc/bootstrap/make.sh ../hc/bootstrap/xz.sh ../hc/bootstrap/cmake.sh ../hc/bootstrap/python.sh ./musl-headers.sh"
 
 URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-16.0.6/llvm-project-16.0.6.src.tar.xz"
 SHA256="ce5e71081d17ce9e86d7cbcfa28c4b04b9300f8fb7e78422b1feb6bc52c3028e"
@@ -21,7 +21,7 @@ cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
 -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
 -DLLVM_BUILTIN_TARGETS="x86_64-unknown-linux-musl" \
 -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-musl" \
--DBUILTINS_x86_64-unknown-linux-musl_CMAKE_SYSROOT="$SCRIPT_DIR/../recipes_target/musl-headers/x86_64" \
+-DBUILTINS_x86_64-unknown-linux-musl_CMAKE_SYSROOT="$SCRIPT_DIR/musl-headers/x86_64" \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_BUILD_GWP_ASAN=OFF \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_BUILD_ORC=OFF \

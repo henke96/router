@@ -2,7 +2,7 @@
 set -e
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
-recipe_init "../recipes_host/llvm.sh ../hc/bootstrap/make.sh ./musl.sh ./libnl3.sh"
+recipe_init "./host_llvm.sh ../hc/bootstrap/make.sh ./musl.sh ./libnl3.sh"
 
 URL="https://w1.fi/releases/hostapd-2.10.tar.gz"
 SHA256="206e7c799b678572c2e3d12030238784bc4a9f82323b0156b4c9466f1498915d"

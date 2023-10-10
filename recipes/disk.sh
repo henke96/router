@@ -2,7 +2,7 @@
 set -e
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
-recipe_init "./bootloader.sh ../recipes_host/mtools.sh"
+recipe_init "./bootloader.sh ./host_mtools.sh"
 
 recipe_start
 dd if=/dev/zero of=disk.img bs=1048576 count=8

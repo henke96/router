@@ -2,7 +2,7 @@
 set -e
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
-recipe_init "../recipes_host/llvm.sh ./hc.sh ./linux.sh"
+recipe_init "./host_llvm.sh ./hc.sh ./linux.sh"
 
 FILE_DEPENDENCIES="$(find ../bootloader -name "*.c" -print -o -name "*.h" -print)"
 
