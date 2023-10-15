@@ -59,7 +59,7 @@ static void iptables_configure(void) {
                 offsetof(struct replace, entries.postroutingEntry) - offsetof(struct replace, entries),
             },
             .num_counters = 5,
-            .counters = NULL // TODO
+            .counters = (struct xt_counters *)&buffer[0]
         },
         .entries = {
             .preroutingEntry = acceptEntry,
