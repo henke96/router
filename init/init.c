@@ -221,7 +221,11 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
         debug_printNum("Failed to find boot filesystem (", status, ")\n");
         goto halt;
     }
-    if (sys_mount(&buffer[buffer_DEVNAME_OFFSET], "/mnt", "msdos", MS_NOATIME, NULL) != 0) goto halt;
+    status = sys_mount(&buffer[buffer_DEVNAME_OFFSET], "/mnt", "msdos", MS_NOATIME, NULL);
+    if (status == -EROFS) {
+        status = sys_mount(&buffer[buffer_DEVNAME_OFFSET], "/mnt", "msdos", MS_RDONLY | MS_NOATIME, NULL);
+    }
+    if (status != 0) goto halt;
 
     status = handleInstallation();
     if (status != 0) {
