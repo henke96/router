@@ -49,6 +49,7 @@ add_nic 8
 
 qemu-system-x86_64 \
 -bios /usr/share/qemu/OVMF.fd \
+-m 256M \
 -drive format=raw,file="$script_dir/${DISK_PREFIX}disk.img" \
 -drive format=raw,file="$script_dir/disk2.img",if=none,id=disk2 -device ahci,id=ahci -device ide-hd,drive=disk2,bus=ahci.0 \
 -enable-kvm $qemu_args
