@@ -113,7 +113,7 @@ static void ksmb_onNetlinkFd(void) {
             uint16_t status = KSMBD_TREE_CONN_STATUS_NO_SHARE;
             if (
                 util_cstrCmp(&request->share[0], "config") == 0 ||
-                (util_cstrCmp(&request->share[0], "disk") == 0 && sys_faccessat(-1, ksmb_DISK_PATH, 0) == 0)
+                (util_cstrCmp(&request->share[0], "data") == 0 && sys_faccessat(-1, ksmb_DISK_PATH "/data", 0) == 0)
             ) status = KSMBD_TREE_CONN_STATUS_OK;
 
             struct {
@@ -152,7 +152,7 @@ static void ksmb_onNetlinkFd(void) {
                 struct genlmsghdr genHdr;
                 struct nlattr responseAttr;
                 struct ksmbd_share_config_response response;
-                char path[8];
+                char path[16];
             } shareResponse = {
                 .hdr = {
                     .nlmsg_len = sizeof(shareResponse),
@@ -179,13 +179,12 @@ static void ksmb_onNetlinkFd(void) {
                     .veto_list_sz = 0,
                 },
             };
-            // TODO: Why is `KSMBD_SHARE_FLAG_CROSSMNT` needed?
             if (util_cstrCmp(&request->share_name[0], "config") == 0) {
-                hc_MEMCPY(&shareResponse.path[0], hc_STR_COMMA_LEN("/mnt"));
-                shareResponse.response.flags = KSMBD_SHARE_FLAG_AVAILABLE | KSMBD_SHARE_FLAG_BROWSEABLE | KSMBD_SHARE_FLAG_WRITEABLE | KSMBD_SHARE_FLAG_CROSSMNT;
-            } else if (util_cstrCmp(&request->share_name[0], "disk") == 0) {
-                hc_MEMCPY(&shareResponse.path[0], hc_STR_COMMA_LEN(ksmb_DISK_PATH));
-                shareResponse.response.flags = KSMBD_SHARE_FLAG_AVAILABLE | KSMBD_SHARE_FLAG_BROWSEABLE | KSMBD_SHARE_FLAG_WRITEABLE | KSMBD_SHARE_FLAG_CROSSMNT;
+                hc_MEMCPY(&shareResponse.path[0], hc_STR_COMMA_LEN("/mnt/config"));
+                shareResponse.response.flags = KSMBD_SHARE_FLAG_AVAILABLE | KSMBD_SHARE_FLAG_BROWSEABLE | KSMBD_SHARE_FLAG_WRITEABLE;
+            } else if (util_cstrCmp(&request->share_name[0], "data") == 0) {
+                hc_MEMCPY(&shareResponse.path[0], hc_STR_COMMA_LEN(ksmb_DISK_PATH "/data"));
+                shareResponse.response.flags = KSMBD_SHARE_FLAG_AVAILABLE | KSMBD_SHARE_FLAG_BROWSEABLE | KSMBD_SHARE_FLAG_WRITEABLE;
             }
             struct iovec_const iov[] = { { &shareResponse, sizeof(shareResponse) } };
             netlink_talk(ksmb.netlinkFd, &iov[0], hc_ARRAY_LEN(iov));
