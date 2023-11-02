@@ -307,7 +307,7 @@ static void modemClient_onFd(struct modemClient *self) {
             for (uint16_t i = 0; i < sendSmsLength; ++i) {
                 uint16_t ch = ucs2Pos[i];
                 int32_t hexI = 4 * i;
-                ucs2HexPos[hexI] = util_hexTable[(ch >> 12) & 0xF];
+                ucs2HexPos[hexI] = util_hexTable[ch >> 12];
                 ucs2HexPos[hexI + 1] = util_hexTable[(ch >> 8) & 0xF];
                 ucs2HexPos[hexI + 2] = util_hexTable[(ch >> 4) & 0xF];
                 ucs2HexPos[hexI + 3] = util_hexTable[ch & 0xF];
