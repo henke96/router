@@ -5,7 +5,7 @@ cd -- "$(dirname -- "$0")"
 recipe_init "./host_llvm.sh ../hc/bootstrap/make.sh"
 
 URL="https://musl.libc.org/releases/musl-1.2.4.tar.gz"
-SHA256="7a35eae33d5372a7c0da1188de798726f68825513b7ae3ebe97aaaa52114f039"
+SHA512="498ec5d7941194a8806f4d42f0f6d218c862996ef1398b737d0d06995e0b7a6574b240a48088f6b84016b14b2776fe463f829dcb11149cdfc1023d496b235c55"
 
 recipe_start
 arch=x86_64

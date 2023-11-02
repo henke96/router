@@ -5,7 +5,7 @@ cd -- "$(dirname -- "$0")"
 recipe_init "../hc/bootstrap/make.sh ./host_flex.sh"
 
 URL="https://ftp.gnu.org/gnu/bc/bc-1.06.tar.gz"
-SHA256="4ef6d9f17c3c0d92d8798e35666175ecd3d8efac4009d6457b5c99cea72c0e33"
+SHA512="a61fa22689bccd843e5f99bfc0ec1fe5577536522392067e4e35bae0914250c1f7d198cfd8bfc4489b969cde0fb200c90028d0be06e99a99afa61f3ce841bf4e"
 
 recipe_start
 ./configure --prefix="$SCRIPT_DIR/$RECIPE_NAME" --disable-dependency-tracking --disable-nls --disable-yacc --without-libiconv-prefix --without-libintl-prefix --without-libreadline-prefix --without-libtextstyle-prefix

@@ -5,7 +5,7 @@ cd -- "$(dirname -- "$0")"
 recipe_init "../hc/bootstrap/make.sh ../hc/bootstrap/xz.sh ./host_llvm.sh ./host_bc.sh ./host_flex.sh ./host_bison.sh ./host_elfutils.sh ./linux-firmware.sh ./init.sh ./router.sh ./hostapd.sh"
 
 URL="https://www.kernel.org/pub/linux/kernel/v6.x/linux-6.6.tar.xz"
-SHA256="d926a06c63dd8ac7df3f86ee1ffc2ce2a3b81a2d168484e76b5b389aba8e56d0"
+SHA512="458b2c34d46206f9b4ccbac54cc57aeca1eaecaf831bc441e59701bac6eadffc17f6ce24af6eadd0454964e843186539ac0d63295ad2cc32d112b60360c39a35"
 FILE_DEPENDENCIES="files/linux/initramfs files/linux/.config files/linux/regulatory.db"
 
 recipe_start

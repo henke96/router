@@ -5,7 +5,7 @@ cd -- "$(dirname -- "$0")"
 recipe_init "../hc/bootstrap/xz.sh"
 
 URL="https://www.kernel.org/pub/linux/kernel/firmware/linux-firmware-20230625.tar.xz"
-SHA256="87597111c0d4b71b31e53cb85a92c386921b84c825a402db8c82e0e86015500d"
+SHA512="0e48aa7f63495485426d37491c7cb61843165625bd47f912c5d83628c6de871759f1a78be3af3d651f7c396bd87dff07e21ba7afc47896c1c143106d5f16d351"
 
 recipe_start
 cd ..

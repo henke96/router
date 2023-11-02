@@ -5,7 +5,7 @@ cd -- "$(dirname -- "$0")"
 recipe_init "./host_llvm.sh ../hc/bootstrap/make.sh ./musl.sh ./libnl3.sh"
 
 URL="https://w1.fi/releases/hostapd-2.10.tar.gz"
-SHA256="206e7c799b678572c2e3d12030238784bc4a9f82323b0156b4c9466f1498915d"
+SHA512="243baa82d621f859d2507d8d5beb0ebda15a75548a62451dc9bca42717dcc8607adac49b354919a41d8257d16d07ac7268203a79750db0cfb34b51f80ff1ce8f"
 FILE_DEPENDENCIES="files/hostapd/.config"
 
 recipe_start
