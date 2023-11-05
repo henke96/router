@@ -31,9 +31,8 @@ int64_t _start(void *imageHandle, struct efi_systemTable *systemTable) {
     int32_t i = 4;
     do {
         --i;
-        static const uint8_t hexTable[16] = "0123456789abcdef";
-        *current++ = hexTable[volumeId[i] >> 4];
-        *current++ = hexTable[volumeId[i] & 0xF];
+        *current++ = util_hexTable[volumeId[i] >> 4];
+        *current++ = util_hexTable[volumeId[i] & 0xF];
     } while (i);
 
     // Load Linux image.
