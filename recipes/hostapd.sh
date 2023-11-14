@@ -11,9 +11,9 @@ FILE_DEPENDENCIES="files/hostapd/.config"
 recipe_start
 cp ../files/hostapd/.config hostapd/.config
 arch=x86_64
-export CC=clang AR=llvm-ar RANLIB=llvm-ranlib
+export CC=clang
 export CFLAGS="-target $arch-unknown-linux-musl --sysroot $SCRIPT_DIR/musl/$arch -I$SCRIPT_DIR/linux-headers/$arch/include"
 export LDFLAGS="-target $arch-unknown-linux-musl --sysroot $SCRIPT_DIR/musl/$arch -static -L$SCRIPT_DIR/libnl3/lib"
 make -C hostapd -j "$NUM_CPUS" install BINDIR= DESTDIR="$SCRIPT_DIR/hostapd" LIBNL_INC="$SCRIPT_DIR/libnl3/include/libnl3"
-llvm-objcopy --strip-sections "$SCRIPT_DIR/hostapd/hostapd"
+objcopy --strip-sections "$SCRIPT_DIR/hostapd/hostapd"
 recipe_finish

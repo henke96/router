@@ -9,7 +9,7 @@ SHA512="498ec5d7941194a8806f4d42f0f6d218c862996ef1398b737d0d06995e0b7a6574b240a4
 
 recipe_start
 arch=x86_64
-export CC=clang AR=llvm-ar RANLIB=llvm-ranlib
+export CC=clang AR=ar RANLIB=ranlib
 export CFLAGS="-target $arch-unknown-linux-musl"
 export LIBCC="$("$CC" $CFLAGS --print-libgcc-file-name)"
 ./configure --prefix= --target=$arch
