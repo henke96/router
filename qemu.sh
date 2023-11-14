@@ -21,8 +21,8 @@ add_nic() {
     qemu_args="$qemu_args -netdev tap,id=net$1,ifname=qemu$1,script=no,downscript=no -device e1000,netdev=net$1"
 }
 
-if test ! -f "$script_dir/disk2.img"; then
-    dd if=/dev/zero of="$script_dir/disk2.img" bs=1048576 count=16
+if test ! -f "$script_dir/disk.img"; then
+    dd if=/dev/zero of="$script_dir/disk.img" bs=1048576 count=16
 fi
 
 trap cleanup EXIT
@@ -50,6 +50,5 @@ add_nic 8
 qemu-system-x86_64 \
 -bios /usr/share/qemu/OVMF.fd \
 -m 256M \
--drive format=raw,file="$script_dir/${DISK_PREFIX}disk.img" \
--drive format=raw,file="$script_dir/disk2.img",if=none,id=disk2 -device ahci,id=ahci -device ide-hd,drive=disk2,bus=ahci.0 \
+-drive format=raw,file=fat:rw:"$script_dir/out" \
 -enable-kvm $qemu_args

@@ -10,8 +10,6 @@
 #include "hc/linux/helpers/_start.c"
 #include "hc/linux/helpers/sys_clone3_func.c"
 
-#define IMAGE_INSTALL_SIZE 0x800000 // 8 MiB
-
 #define buffer_DEVNAME_OFFSET 3084
 static char buffer[4096] hc_ALIGNED(16);
 
@@ -38,12 +36,9 @@ static int32_t initialise(void) {
 }
 
 // Stores name of device at `&buffer[buffer_DEVNAME_OFFSET]`.
-// If `majorDev` is negative, it just prints available devices.
-static int32_t iterateDevices(int32_t majorDev, uint32_t minorDev) {
+static int32_t iterateDevices(uint32_t volumeId) {
     int32_t devFd = sys_openat(-1, "/dev", O_RDONLY, 0);
     if (devFd < 0) return -1;
-
-    if (majorDev < 0) sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Block devices:"));
 
     for (;;) {
         int64_t read = sys_getdents64(devFd, &buffer[0], 3072); // Leave 1024 bytes at the end.
@@ -59,7 +54,6 @@ static int32_t iterateDevices(int32_t majorDev, uint32_t minorDev) {
             statx.stx_rdev_major = 0;
             if (sys_statx(devFd, &current->d_name[0], 0, 0, &statx) < 0) return -3;
             if (statx.stx_rdev_major == 0) continue;
-            if (majorDev > 0 && ((uint32_t)majorDev != statx.stx_rdev_major || minorDev != statx.stx_rdev_minor)) continue;
 
             int64_t nameLen = util_cstrLen(&current->d_name[0]);
             char *buffer2 = &buffer[3072];
@@ -71,22 +65,16 @@ static int32_t iterateDevices(int32_t majorDev, uint32_t minorDev) {
 
             hc_MEMCPY(&buffer2[10], hc_STR_COMMA_LEN("  /dev")); // The slash ends up at `buffer_DEVNAME_OFFSET` (3072 + 10 + 2).
 
-            if (majorDev < 0) { // Only print.
-                sys_write(STDOUT_FILENO, &buffer2[10], 6 + 1 + nameLen);
-                continue;
-            }
-
             // Read fat volume id and label to verify it's the correct one.
             int32_t fd = sys_openat(-1, &buffer2[12], O_RDONLY, 0);
             if (fd < 0) return -4;
 
-            char fatBuffer[10] hc_ALIGNED(2);
+            char fatBuffer[4] hc_ALIGNED(4);
             if (sys_pread64(fd, &fatBuffer[0], sizeof(fatBuffer), 0x27) != sizeof(fatBuffer)) return -5;
             if (sys_close(fd) != 0) return -6;
 
-            if (*(uint16_t *)&fatBuffer[0] != majorDev) continue; // Check major device id.
-            if (*(uint16_t *)&fatBuffer[2] != minorDev) continue; // Check minor device id.
-            if (hc_MEMCMP(&fatBuffer[4], hc_STR_COMMA_LEN("ROUTER")) != 0) continue; // Check label.
+            // TODO: Make sure it's actually FAT, and check label as well.
+            if (*(uint32_t *)&fatBuffer[0] != volumeId) continue;
 
             if (sys_close(devFd) != 0) return -7;
             return 0; // Found.
@@ -94,71 +82,6 @@ static int32_t iterateDevices(int32_t majorDev, uint32_t minorDev) {
     }
     if (sys_close(devFd) != 0) return -8;
     return 1; // Not found.
-}
-
-static int32_t handleInstallation(void) {
-    // Check if /mnt/install exists.
-    int32_t installFd = sys_openat(-1, "/mnt/install", O_RDONLY, 0);
-    if (installFd < 0) {
-        if (installFd == -ENOENT) return 0;
-        return -1;
-    }
-
-    // Open source fd (boot device).
-    int32_t sourceFd = sys_openat(-1, &buffer[buffer_DEVNAME_OFFSET], O_RDONLY, 0);
-    if (sourceFd < 0) return -2;
-
-    // Read destination device name and open destFd.
-    int64_t numRead = sys_read(installFd, &buffer[buffer_DEVNAME_OFFSET], sizeof(buffer) - buffer_DEVNAME_OFFSET - 1);
-    while (numRead <= 1) {
-        if (iterateDevices(-1, 0) < 0) return -3;
-        sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("\nInstall on: "));
-        numRead = sys_read(STDIN_FILENO, &buffer[buffer_DEVNAME_OFFSET], sizeof(buffer) - buffer_DEVNAME_OFFSET - 1);
-        if (numRead < 0) return -4;
-    }
-    if (sys_close(installFd) < 0) return -5;
-    if (buffer[buffer_DEVNAME_OFFSET + numRead - 1] != '\n') return -6;
-    buffer[buffer_DEVNAME_OFFSET + numRead - 1] = '\0';
-
-    // Unmount boot filesystem.
-    if (sys_umount2("/mnt", 0) < 0) return -7;
-
-    // Open destination fd (install device), and calculate volume id.
-    int32_t destFd = sys_openat(-1, &buffer[buffer_DEVNAME_OFFSET], O_WRONLY, 0);
-    if (destFd < 0) return -8;
-    struct statx statx;
-    statx.stx_rdev_major = 0;
-    if (sys_statx(destFd, "", AT_EMPTY_PATH, 0, &statx) != 0) return -9;
-    if (statx.stx_rdev_major == 0) return -10; // Not a device.
-    uint32_t volumeId = (statx.stx_rdev_minor << 16) | statx.stx_rdev_major;
-
-    // Perform installation.
-    for (uint64_t totalWritten = 0; totalWritten < IMAGE_INSTALL_SIZE;) {
-        int64_t read = sys_read(sourceFd, &buffer[0], buffer_DEVNAME_OFFSET);
-        if (read <= 0) return -11;
-
-        // Rewrite volume id.
-        if (math_RANGES_OVERLAP(0x27, 0x27 + 4, totalWritten, totalWritten + (uint64_t)read)) {
-            uint64_t volumeIdOffset = 0x27 - totalWritten;
-            for (uint64_t i = 0; i < 4; ++i) {
-                if (volumeIdOffset + i < (uint64_t)read) hc_MEMCPY(&buffer[volumeIdOffset + i], (char *)&volumeId + i, 1);
-            }
-        }
-
-        int64_t written = sys_write(destFd, &buffer[0], read);
-        if (written != read) return -12;
-        totalWritten += (uint64_t)written;
-    }
-    if (sys_close(sourceFd) != 0) return -13;
-    if (sys_close(destFd) != 0) return -14;
-
-    // Mount destination filesystem.
-    if (sys_mount(&buffer[buffer_DEVNAME_OFFSET], "/mnt", "msdos", MS_NOATIME, NULL) != 0) return -15;
-
-    // Remove installation file.
-    if (sys_unlinkat(-1, "/mnt/install", 0) != 0) return -16;
-
-    return 1; // Success!
 }
 
 static int32_t mountDisk(void) {
@@ -213,7 +136,7 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
     if (util_hexToUint(&buffer[0], 8, &volumeId) <= 0) goto halt;
 
     // Find and mount the boot filesystem.
-    while ((status = iterateDevices(volumeId & 0xFFFF, (uint32_t)(volumeId >> 16))) == 1) {
+    while ((status = iterateDevices((uint32_t)volumeId)) == 1) {
         // Try max 10 times per second.
         if (sys_clock_nanosleep(CLOCK_MONOTONIC, 0, &(struct timespec) { .tv_nsec = 100000000 }, NULL) != 0) goto halt;
     }
@@ -226,13 +149,6 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
         status = sys_mount(&buffer[buffer_DEVNAME_OFFSET], "/mnt", "msdos", MS_RDONLY | MS_NOATIME, NULL);
     }
     if (status != 0) goto halt;
-
-    status = handleInstallation();
-    if (status != 0) {
-        if (status < 0) debug_printNum("Installation failed (", status, ")\n");
-        else cleanExit = true; // status == 1
-        goto halt_umount;
-    }
 
     status = mountDisk();
     if (status < 0) {

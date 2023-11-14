@@ -1,5 +1,5 @@
-# Building Image
-1. Run `./build_disk.sh` to build disk.img
+# Building
+1. Run `./build.sh` to build `./out`
 
 # Running in Qemu
 1. Run `sudo ./qemu.sh`
