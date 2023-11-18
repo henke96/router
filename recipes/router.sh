@@ -1,9 +1,9 @@
 #!/bin/sh --
-set -e
+set -ex
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
 
-recipe_init "./host_llvm.sh ./hc.sh"
+recipe_init "./host_llvm.sh" "./hc.sh"
 
 FILE_DEPENDENCIES="$(find ../router -name "*.c" -print -o -name "*.h" -print)"
 

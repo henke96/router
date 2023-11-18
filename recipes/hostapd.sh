@@ -1,8 +1,8 @@
 #!/bin/sh --
-set -e
+set -ex
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
-recipe_init "./host_llvm.sh ../hc/bootstrap/make.sh ./musl.sh ./libnl3.sh"
+recipe_init "../hc/bootstrap/make.sh ./host_llvm.sh" "./musl.sh ./libnl3.sh"
 
 URL="https://w1.fi/releases/hostapd-2.10.tar.gz"
 SHA512="243baa82d621f859d2507d8d5beb0ebda15a75548a62451dc9bca42717dcc8607adac49b354919a41d8257d16d07ac7268203a79750db0cfb34b51f80ff1ce8f"

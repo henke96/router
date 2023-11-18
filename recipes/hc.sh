@@ -1,8 +1,8 @@
 #!/bin/sh --
-set -e
+set -ex
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
-recipe_init ""
+recipe_init "" ""
 
 FILE_DEPENDENCIES="$(find ../hc/src -name "*.c" -print -o -name "*.h" -print)"
 

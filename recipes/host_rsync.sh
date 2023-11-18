@@ -1,8 +1,8 @@
 #!/bin/sh --
-set -e
+set -ex
 cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
-recipe_init "../hc/bootstrap/make.sh"
+recipe_init "../hc/bootstrap/make.sh" ""
 
 URL="https://download.samba.org/pub/rsync/src/rsync-3.2.7.tar.gz"
 SHA512="c2afba11a352fd88133f9e96e19d6df80eb864450c83eced13a7faa23df947bccf2ef093f2101df6ee30abff4cbbd39ac802e9aa5f726e42c9caff274fad8377"
