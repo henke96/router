@@ -13,4 +13,3 @@ export FLAGS="-I$SCRIPT_DIR/linux"
 mkdir ./$RECIPE_NAME
 mv ../bootloader/x86_64 ./$RECIPE_NAME/
 recipe_finish
-
