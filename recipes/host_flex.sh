@@ -11,7 +11,8 @@ SHA512="e9785f3d620a204b7d20222888917dc065c2036cae28667065bf7862dfa1b25235095a12
 recipe_start
 rm -rf "./$pkg"; gzip -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
 
-./configure --prefix="$SCRIPT_DIR/$RECIPE_NAME" --disable-dependency-tracking --disable-nls --disable-libfl --without-libiconv-prefix --without-libintl-prefix
+# https://github.com/westes/flex/issues/428
+./configure --prefix="$SCRIPT_DIR/$RECIPE_NAME" --disable-dependency-tracking --disable-nls --disable-libfl --without-libiconv-prefix --without-libintl-prefix CFLAGS="-g -O2 -D_GNU_SOURCE"
 make -j "$NUM_CPUS" install
 
 cd ..; rm -rf "./$pkg"

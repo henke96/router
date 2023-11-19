@@ -20,7 +20,7 @@ cp ./libfts.so ./libobstack.so
 ./configure --prefix="$SCRIPT_DIR/$RECIPE_NAME" --disable-dependency-tracking --disable-demangler --disable-nls --without-valgrind --without-bzlib --without-lzma --without-zstd --without-libiconv-prefix --without-libintl-prefix --disable-debuginfod --disable-libdebuginfod --disable-symbol-versioning \
 CFLAGS="-Wno-error -I$SCRIPT_DIR/host_zlib/include" LDFLAGS="-L`pwd` -L$SCRIPT_DIR/host_zlib/lib"
 cp ../files/elfutils/libintl.h ./libelf/libintl.h
-touch ./lib/libeu.a
+ar r ./lib/libeu.a
 make -C libelf -j "$NUM_CPUS" install
 
 cd ..; rm -rf "./$pkg"
