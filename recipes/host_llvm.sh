@@ -4,12 +4,15 @@ cd -- "$(dirname -- "$0")"
 . ../hc/bootstrap/recipe.sh
 recipe_init "../hc/bootstrap/make.sh ../hc/bootstrap/xz.sh ../hc/bootstrap/cmake.sh ../hc/bootstrap/python.sh" "./musl-headers.sh"
 
-URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-16.0.6/llvm-project-16.0.6.src.tar.xz"
+pkg="llvm-project-16.0.6.src"
+URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-16.0.6/$pkg.tar.xz"
 SHA512="89a67ebfbbc764cc456e8825ecfa90707741f8835b1b2adffae0b227ab1fe5ca9cce75b0efaffc9ca8431cae528dc54fd838867a56a2b645344d9e82d19ab1b7"
 
 recipe_start
-cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
--DCMAKE_MAKE_PROGRAM=make -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
+rm -rf "./$pkg"; xz -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
+
+cmake -S llvm -B build -G "Unix Makefiles" \
+-DCMAKE_MAKE_PROGRAM=make \
 -DCMAKE_INSTALL_PREFIX="$SCRIPT_DIR/$RECIPE_NAME" -DCMAKE_BUILD_TYPE=Release -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON -DLLVM_INSTALL_BINUTILS_SYMLINKS=ON \
 -DLLVM_APPEND_VC_REV=OFF \
 -DLLVM_ENABLE_PROJECTS="clang;lld" \
@@ -31,4 +34,6 @@ cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_BUILD_XRAY=OFF \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_BUILD_SANITIZERS=OFF
 make -C build -j "$NUM_CPUS" install
+
+cd ..; rm -rf "./$pkg"
 recipe_finish
