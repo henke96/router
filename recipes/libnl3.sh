@@ -1,6 +1,6 @@
 #!/bin/sh --
-set -ex
-cd -- "$(dirname -- "$0")"
+set -eax
+cd -- "${0%/*}/"
 . ../hc/bootstrap/recipe.sh
 recipe_init "../hc/bootstrap/make.sh ./host_llvm.sh ./host_bison.sh ./host_flex.sh" "./musl.sh ./linux-headers.sh"
 
@@ -12,8 +12,8 @@ recipe_start
 rm -rf "./$pkg"; gzip -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
 
 arch=x86_64
-export CC=clang
-export CFLAGS="-target $arch-unknown-linux-musl --sysroot $SCRIPT_DIR/musl/$arch -I$SCRIPT_DIR/linux-headers/$arch/include"
+export CC=clang AR=llvm-ar RANLIB=llvm-ranlib
+export CFLAGS="-target $arch-unknown-linux-musl --sysroot $SCRIPT_DIR/musl/$arch -I$SCRIPT_DIR/linux-headers/$arch"
 ./configure --prefix= --host=$arch --disable-dependency-tracking --disable-debug --enable-shared=no
 make -j "$NUM_CPUS" install DESTDIR="$SCRIPT_DIR/$RECIPE_NAME"
 

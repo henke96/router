@@ -1,8 +1,8 @@
 #!/bin/sh --
-set -ex
-cd -- "$(dirname -- "$0")"
+set -eax
+cd -- "${0%/*}/"
 . ../hc/bootstrap/recipe.sh
-recipe_init "../hc/bootstrap/make.sh ./host_bzip2.sh ./host_m4.sh" "./host_zlib.sh"
+recipe_init "../hc/bootstrap/make.sh ./host_bzip2.sh ./host_m4.sh" ""
 
 pkg="elfutils-0.189"
 URL="https://sourceware.org/elfutils/ftp/0.189/$pkg.tar.bz2"
@@ -12,13 +12,20 @@ FILE_DEPENDENCIES="files/elfutils/dummylib.c files/elfutils/libintl.h"
 recipe_start
 rm -rf "./$pkg"; bzip2 -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
 
-# Trick configure script to avoid useless dependencies.
-cc -shared -o ./libfts.so ../files/elfutils/dummylib.c
+# Trick configure script to avoid unneeded dependencies.
+"$CC" -shared -o ./libfts.so ../files/elfutils/dummylib.c
 cp ./libfts.so ./libargp.so
 cp ./libfts.so ./libobstack.so
+cp ./libfts.so ./libz.so
+
+# Remove libz dependency.
+sed "s/elf_compress.c elf_compress_gnu.c//" ./libelf/Makefile.in > ./sed.temp
+mv ./sed.temp ./libelf/Makefile.in
+sed "s/__libelf_decompress_elf (strscn, &zsize, &zalign)/NULL/" ./libelf/elf_strptr.c > ./sed.temp
+mv ./sed.temp ./libelf/elf_strptr.c
 
 ./configure --prefix="$SCRIPT_DIR/$RECIPE_NAME" --disable-dependency-tracking --disable-demangler --disable-nls --without-valgrind --without-bzlib --without-lzma --without-zstd --without-libiconv-prefix --without-libintl-prefix --disable-debuginfod --disable-libdebuginfod --disable-symbol-versioning \
-CFLAGS="-Wno-error -I$SCRIPT_DIR/host_zlib/include" LDFLAGS="-L`pwd` -L$SCRIPT_DIR/host_zlib/lib"
+CFLAGS="-Wno-error" LDFLAGS="-L$(pwd)"
 cp ../files/elfutils/libintl.h ./libelf/libintl.h
 ar r ./lib/libeu.a
 make -C libelf -j "$NUM_CPUS" install

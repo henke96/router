@@ -1,7 +1,7 @@
 #!/bin/sh
 # Usage: ./qemu.sh [MACVTAP_INTERFACE]
 set -e
-script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
+script_dir="$(cd -- "${0%/*}/" && pwd)"
 
 cleanup() {
     set +e

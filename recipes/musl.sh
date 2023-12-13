@@ -1,6 +1,6 @@
 #!/bin/sh --
-set -ex
-cd -- "$(dirname -- "$0")"
+set -eax
+cd -- "${0%/*}/"
 . ../hc/bootstrap/recipe.sh
 recipe_init "../hc/bootstrap/make.sh ./host_llvm.sh" ""
 
@@ -12,7 +12,7 @@ recipe_start
 rm -rf "./$pkg"; gzip -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
 
 arch=x86_64
-export CC=clang AR=ar RANLIB=ranlib
+export CC=clang AR=llvm-ar RANLIB=llvm-ranlib
 export CFLAGS="-target $arch-unknown-linux-musl"
 export LIBCC="$("$CC" $CFLAGS --print-libgcc-file-name)"
 ./configure --prefix= --target=$arch

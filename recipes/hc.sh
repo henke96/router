@@ -1,6 +1,6 @@
 #!/bin/sh --
-set -ex
-cd -- "$(dirname -- "$0")"
+set -eax
+cd -- "${0%/*}/"
 . ../hc/bootstrap/recipe.sh
 recipe_init "" ""
 

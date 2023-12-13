@@ -1,8 +1,8 @@
 #!/bin/sh --
-set -ex
-cd -- "$(dirname -- "$0")"
+set -eax
+cd -- "${0%/*}/"
 . ../hc/bootstrap/recipe.sh
-recipe_init "../hc/bootstrap/make.sh ../hc/bootstrap/xz.sh ./host_rsync.sh" ""
+recipe_init "../hc/bootstrap/make.sh ../hc/bootstrap/xz.sh" ""
 
 pkg="linux-6.6"
 URL="https://www.kernel.org/pub/linux/kernel/v6.x/$pkg.tar.xz"
@@ -12,8 +12,9 @@ recipe_start
 rm -rf "./$pkg"; xz -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
 
 export ARCH=x86_64
-make -j "$NUM_CPUS" headers_install INSTALL_HDR_PATH="$SCRIPT_DIR/$RECIPE_NAME/$ARCH" HOSTCC="$CC"
+make -j "$NUM_CPUS" headers HOSTCC="$CC"
+cd ./usr/include
+test -z "$(find . -type f -name "*.h" ! -exec /bin/sh -c 'set -e; dest="$1/$2"; mkdir -p "${dest%/*}/"; cp "$2" "$dest"' sh "../../../$RECIPE_NAME/$ARCH" {} \; -print)"
 
-cd ..; rm -rf "./$pkg"
+cd ../../..; rm -rf "./$pkg"
 recipe_finish
-

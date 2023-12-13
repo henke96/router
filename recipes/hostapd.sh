@@ -1,6 +1,6 @@
 #!/bin/sh --
-set -ex
-cd -- "$(dirname -- "$0")"
+set -eax
+cd -- "${0%/*}/"
 . ../hc/bootstrap/recipe.sh
 recipe_init "../hc/bootstrap/make.sh ./host_llvm.sh" "./musl.sh ./libnl3.sh"
 
@@ -15,10 +15,10 @@ rm -rf "./$pkg"; gzip -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
 cp ../files/hostapd/.config hostapd/.config
 arch=x86_64
 export CC=clang
-export CFLAGS="-target $arch-unknown-linux-musl --sysroot $SCRIPT_DIR/musl/$arch -I$SCRIPT_DIR/linux-headers/$arch/include"
+export CFLAGS="-target $arch-unknown-linux-musl --sysroot $SCRIPT_DIR/musl/$arch -I$SCRIPT_DIR/linux-headers/$arch"
 export LDFLAGS="-target $arch-unknown-linux-musl --sysroot $SCRIPT_DIR/musl/$arch -static -L$SCRIPT_DIR/libnl3/lib"
 make -C hostapd -j "$NUM_CPUS" install BINDIR= DESTDIR="$SCRIPT_DIR/hostapd" LIBNL_INC="$SCRIPT_DIR/libnl3/include/libnl3"
-objcopy --strip-sections "$SCRIPT_DIR/hostapd/hostapd"
+llvm-objcopy --strip-sections "$SCRIPT_DIR/$RECIPE_NAME/hostapd"
 
 cd ..; rm -rf "./$pkg"
 recipe_finish

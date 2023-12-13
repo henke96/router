@@ -1,6 +1,6 @@
 #!/bin/sh --
 set -e
-script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
+script_dir="$(cd -- "${0%/*}/" && pwd)"
 
 "$script_dir/recipes/bootloader.sh"
 mkdir -p "$script_dir/out/efi/boot"
