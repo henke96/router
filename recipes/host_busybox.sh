@@ -13,8 +13,8 @@ recipe_start
 rm -rf "./$pkg"; bzip2 -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
 
 cp ../files/host_busybox/.config .
-make -j "$NUM_CPUS"
-make -j "$NUM_CPUS" install
+make -j "$NUM_CPUS" HOSTCC="$CC" CC="$CC"
+make -j "$NUM_CPUS" install HOSTCC="$CC" CC="$CC"
 
 cd ..; rm -rf "./$pkg"
 recipe_finish
