@@ -26,15 +26,18 @@ touch -t 197001010000.00 ../init/$ARCH/debug.init.elf
 touch -t 197001010000.00 ../router/$ARCH/router.elf
 touch -t 197001010000.00 ../router/$ARCH/debug.router.elf
 
+make -j "$NUM_CPUS" -C ./usr gen_init_cpio CC="$CC"
+
 # Build release image.
 export DEBUG_PREFIX=
+./usr/gen_init_cpio ../files/linux/initramfs > ./initramfs.cpio
 make -j "$NUM_CPUS" $llvm_tools HOSTCC="$CC"
 mkdir "../$RECIPE_NAME"
 mv arch/x86/boot/bzImage "../$RECIPE_NAME/"
 
 # Build debug image.
-touch usr/gen_init_cpio
 export DEBUG_PREFIX=debug.
+./usr/gen_init_cpio ../files/linux/initramfs > ./initramfs.cpio
 make -j "$NUM_CPUS" $llvm_tools HOSTCC="$CC"
 mv arch/x86/boot/bzImage "../$RECIPE_NAME/debug.bzImage"
 
