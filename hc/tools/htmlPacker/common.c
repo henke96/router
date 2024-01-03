@@ -1,4 +1,4 @@
-static void initialise(int32_t argc, char **argv, char **envp);
+static void initialise(char **envp);
 static int32_t changeDir(char *path);
 static int32_t replaceWithFile(int64_t replaceIndex, int64_t replaceLen, char *path, int32_t pathLen, bool asBase64);
 static int32_t writeToFile(char *path, char *content, int64_t contentLen);
@@ -48,13 +48,13 @@ static int32_t handleInclude(char *startPattern, char *endPattern, bool asBase64
 #define common_ALLOC_RESERVE_SIZE ((int64_t)1 << 32)
 int32_t start(int32_t argc, char **argv, char **envp) {
     if (argc != 4) return 1;
-    initialise(argc, argv, envp);
+    initialise(envp);
     if (allocator_init(&alloc, common_ALLOC_RESERVE_SIZE) < 0) return 1;
 
-    int32_t status = changeDir(argv[1]);
+    int32_t status = replaceWithFile(0, 0, argv[1], (int32_t)util_cstrLen(argv[1]), false);
     if (status < 0) return 1;
 
-    status = replaceWithFile(0, 0, argv[2], (int32_t)util_cstrLen(argv[2]), false);
+    status = changeDir(argv[2]);
     if (status < 0) return 1;
 
     int32_t complete = 0;
@@ -82,8 +82,8 @@ int32_t start(int32_t argc, char **argv, char **envp) {
 
     int64_t outNameLen = util_cstrLen(argv[3]);
     int64_t outNameHtmlLen = outNameLen + (int64_t)sizeof(".html");
-    char *outNameHtml = &alloc.mem[bufferLen];
-    if (allocator_resize(&alloc, bufferLen + outNameHtmlLen) < 0) {
+    char *outNameHtml = &alloc.mem[alloc.size];
+    if (allocator_resize(&alloc, alloc.size + outNameHtmlLen) < 0) {
         status = 1;
         goto cleanup_alloc;
     }

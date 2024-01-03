@@ -17,7 +17,7 @@ int32_t pageSize;
 
 #include "../common.c"
 
-static void initialise(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
+static void initialise(char **envp) {
     pageSize = util_getPageSize(util_getAuxv(envp));
 }
 
@@ -27,8 +27,8 @@ static int32_t changeDir(char *path) {
 
 static int32_t replaceWithFile(int64_t replaceIndex, int64_t replaceLen, char *path, int32_t pathLen, bool asBase64) {
     // Add null terminator to path.
-    char *pathZ = &alloc.mem[bufferLen];
-    if (allocator_resize(&alloc, bufferLen + (int64_t)pathLen + 1) < 0) return -1;
+    char *pathZ = &alloc.mem[alloc.size];
+    if (allocator_resize(&alloc, alloc.size + (int64_t)pathLen + 1) < 0) return -1;
     hc_MEMCPY(pathZ, path, (uint64_t)pathLen);
     pathZ[pathLen] = '\0';
 
@@ -44,7 +44,7 @@ static int32_t replaceWithFile(int64_t replaceIndex, int64_t replaceLen, char *p
         status = -3;
         goto cleanup_pathFd;
     }
-    int64_t contentLen = (int64_t)contentStat.stx_size;
+    int64_t contentLen = contentStat.stx_size;
 
     // Resize buffer.
     int64_t insertLen = contentLen;
