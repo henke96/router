@@ -1,0 +1,28 @@
+#!/bin/sh --
+set -eax
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+recipe_init "../hc/bootstrap/make host_llvm musl libnl3"
+
+pkg="hostapd-2.10"
+URL="https://w1.fi/releases/$pkg.tar.gz"
+SHA512="243baa82d621f859d2507d8d5beb0ebda15a75548a62451dc9bca42717dcc8607adac49b354919a41d8257d16d07ac7268203a79750db0cfb34b51f80ff1ce8f"
+FILE_DEPENDENCIES="files/hostapd/.config"
+
+recipe_start
+musl_out="$PWD/musl-out"
+linux_headers_out="$PWD/linux-headers-out"
+libnl3_out="$PWD/libnl3-out"
+export PATH="$PWD/make-out/bin:$PWD/host_llvm-out/bin:$PATH"
+rm -rf "./$pkg"; gzip -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
+
+cp "$SCRIPT_DIR/files/hostapd/.config" hostapd/
+arch=x86_64
+export CC=clang
+export CFLAGS="-target $arch-unknown-linux-musl --sysroot $musl_out/$arch -I$linux_headers_out/$arch"
+export LDFLAGS="-target $arch-unknown-linux-musl --sysroot $musl_out/$arch -static -L$libnl3_out/lib"
+make -C hostapd -j "$NUM_CPUS" install BINDIR= DESTDIR="$RECIPE_OUT" LIBNL_INC="$libnl3_out/include/libnl3"
+llvm-objcopy --strip-sections "$RECIPE_OUT/hostapd"
+
+cd ..; rm -rf "./$pkg"
+recipe_finish

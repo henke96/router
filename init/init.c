@@ -50,16 +50,17 @@ static int32_t iterateDevices(uint32_t volumeId) {
             current != (void *)&buffer[read];
             current = (void *)current + current->d_reclen
         ) {
+            char *name = (void *)&current[1];
             struct statx statx;
             statx.stx_rdev_major = 0;
-            if (sys_statx(devFd, &current->d_name[0], 0, 0, &statx) < 0) return -3;
+            if (sys_statx(devFd, name, 0, 0, &statx) < 0) return -3;
             if (statx.stx_rdev_major == 0) continue;
 
-            int64_t nameLen = util_cstrLen(&current->d_name[0]);
+            int64_t nameLen = util_cstrLen(name);
             char *buffer2 = &buffer[3072];
 
             // Check if it's a block device.
-            hc_MEMMOVE(&buffer2[17], &current->d_name[0], (uint64_t)nameLen + 1);
+            hc_MEMMOVE(&buffer2[17], name, (uint64_t)nameLen + 1);
             hc_MEMCPY(&buffer2[0], hc_STR_COMMA_LEN("/sys/class/block/"));
             if (sys_faccessat(-1, &buffer2[0], 0) != 0) continue;
 

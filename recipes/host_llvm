@@ -1,19 +1,20 @@
 #!/bin/sh --
 set -eax
-cd -- "${0%/*}/"
-. ../hc/bootstrap/recipe.sh
-recipe_init "../hc/bootstrap/make.sh ../hc/bootstrap/xz.sh ../hc/bootstrap/cmake.sh ../hc/bootstrap/python.sh" "./musl-headers.sh"
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+recipe_init "../hc/bootstrap/make ../hc/bootstrap/xz ../hc/bootstrap/python ../hc/bootstrap/cmake musl-headers"
 
 pkg="llvm-project-16.0.6.src"
 URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-16.0.6/$pkg.tar.xz"
 SHA512="89a67ebfbbc764cc456e8825ecfa90707741f8835b1b2adffae0b227ab1fe5ca9cce75b0efaffc9ca8431cae528dc54fd838867a56a2b645344d9e82d19ab1b7"
 
 recipe_start
+export PATH="$PWD/make-out/bin:$PWD/xz-out/bin:$PWD/python-out/bin:$PWD/cmake-out/bin:$PATH"
 rm -rf "./$pkg"; xz -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
 
 cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
 -DCMAKE_MAKE_PROGRAM=make -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
--DCMAKE_INSTALL_PREFIX="$SCRIPT_DIR/$RECIPE_NAME" \
+-DCMAKE_INSTALL_PREFIX="$RECIPE_OUT" \
 -DCMAKE_BUILD_TYPE=Release \
 -DLLVM_APPEND_VC_REV=OFF \
 -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_UTILS=OFF \
@@ -25,7 +26,7 @@ cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
 -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
 -DLLVM_BUILTIN_TARGETS="x86_64-unknown-linux-musl" \
 -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-musl" \
--DBUILTINS_x86_64-unknown-linux-musl_CMAKE_SYSROOT="$SCRIPT_DIR/musl-headers/x86_64" \
+-DBUILTINS_x86_64-unknown-linux-musl_CMAKE_SYSROOT="$PWD/../musl-headers-out/x86_64" \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_BUILD_GWP_ASAN=OFF \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_BUILD_ORC=OFF \

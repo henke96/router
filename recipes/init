@@ -1,0 +1,14 @@
+#!/bin/sh --
+set -eax
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+recipe_init "host_llvm /hc"
+
+FILE_DEPENDENCIES="$(cd "$SCRIPT_DIR"; find ../init -name "*.c" -print -o -name "*.h" -print)"
+
+recipe_start
+export NO_AARCH64=1 NO_RISCV64=1 LLVM=host_llvm-out
+"$SCRIPT_DIR/../hc/tools/build/elf.sh" "$SCRIPT_DIR/../init/init.c" init
+mkdir "$RECIPE_OUT"
+mv "$SCRIPT_DIR/../hc-out/init/x86_64" "$RECIPE_OUT/"
+recipe_finish

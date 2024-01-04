@@ -16,13 +16,13 @@ struct modemClient_constant {
 struct modemClient_startSms {
     uint8_t tag;
     uint8_t numberSize;
-    char number[];
+    // char number[];
 };
 
 struct modemClient_sendSms {
     uint8_t tag;
     uint16_t smsSize;
-    char sms[];
+    // char sms[];
 } hc_PACKED(1);
 
 struct modemClient {
@@ -75,9 +75,10 @@ static int32_t modemClient_processQueue(struct modemClient *self) {
         case modemClient_START_SMS: {
             struct modemClient_startSms *cmd = (void *)&self->commandQueue[0];
             #define modemClient_START_SMS_CMD "AT+CMGS=\""
+            char *number = (void *)&cmd[1];
             struct iovec_const iov[] = {
                 { hc_STR_COMMA_LEN(modemClient_START_SMS_CMD) },
-                { &cmd->number[0], cmd->numberSize },
+                { number, cmd->numberSize },
                 { hc_STR_COMMA_LEN("\"\r") }
             };
             int64_t written = sys_writev(self->fd, &iov[0], hc_ARRAY_LEN(iov));
@@ -86,8 +87,9 @@ static int32_t modemClient_processQueue(struct modemClient *self) {
         }
         case modemClient_SEND_SMS: {
             struct modemClient_sendSms *cmd = (void *)&self->commandQueue[0];
+            char *sms = (void *)&cmd[1];
             struct iovec_const iov[] = {
-                { &cmd->sms[0], cmd->smsSize },
+                { sms, cmd->smsSize },
                 { hc_STR_COMMA_LEN("\x1a") }
             };
             int64_t written = sys_writev(self->fd, &iov[0], hc_ARRAY_LEN(iov));
@@ -125,13 +127,13 @@ static int32_t modemClient_queueSms(struct modemClient *self, const char *number
     startCmd = (void *)&self->commandQueue[self->commandQueueSize];
     startCmd->tag = modemClient_START_SMS;
     startCmd->numberSize = numberSize;
-    hc_MEMCPY(&startCmd->number[0], number, numberSize);
+    hc_MEMCPY(&startCmd[1], number, numberSize);
     self->commandQueueSize += startCmdSize;
 
     sendCmd = (void *)&self->commandQueue[self->commandQueueSize];
     sendCmd->tag = modemClient_SEND_SMS;
     sendCmd->smsSize = smsSize;
-    hc_MEMCPY(&sendCmd->sms[0], sms, smsSize);
+    hc_MEMCPY(&sendCmd[1], sms, smsSize);
     self->commandQueueSize += sendCmdSize;
 
     return modemClient_processQueue(self);

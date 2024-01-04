@@ -7,7 +7,7 @@ asm(
     ".global linuxBin\n"
     ".align 8\n"
     "linuxBin:\n"
-    ".incbin \"debug.bzImage\"\n"
+    ".incbin \"debug-bzImage\"\n"
     "linuxBin_end:\n"
     ".global linuxBin_size\n"
     ".align 4\n"

@@ -31,7 +31,7 @@
 struct dhcp_option {
     uint8_t code;
     uint8_t length;
-    uint8_t data[];
+    // uint8_t data[];
 };
 
 struct dhcp_header {
@@ -50,5 +50,5 @@ struct dhcp_header {
     char serverName[64];
     char bootFileName[128];
     uint32_t magicCookie;
-    uint8_t options[];
+    // uint8_t options[];
 };

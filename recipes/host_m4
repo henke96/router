@@ -1,0 +1,19 @@
+#!/bin/sh --
+set -eax
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+recipe_init "../hc/bootstrap/make ../hc/bootstrap/xz"
+
+pkg="m4-1.4.19"
+URL="https://ftp.gnu.org/gnu/m4/$pkg.tar.xz"
+SHA512="47f595845c89709727bda0b3fc78e3188ef78ec818965b395532e7041cabe9e49677ee4aca3d042930095a7f8df81de3da1026b23b6897be471f6cf13ddd512b"
+
+recipe_start
+export PATH="$PWD/make-out/bin:$PWD/xz-out/bin:$PATH"
+rm -rf "./$pkg"; xz -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
+
+./configure --prefix="$RECIPE_OUT" --disable-dependency-tracking --disable-nls --without-libiconv-prefix --without-libintl-prefix --without-dmalloc --without-libsigsegv-prefix
+make -j "$NUM_CPUS" install
+
+cd ..; rm -rf "./$pkg"
+recipe_finish

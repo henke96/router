@@ -82,7 +82,7 @@ static void dhcpServer_onFd(struct dhcpServer *self) {
 
     // Find DHCP options.
     struct dhcp_option *messageType = NULL;
-    for (struct dhcp_option *current = (void *)&header->options[0];;) {
+    for (struct dhcp_option *current = (void *)&header[1];;) {
         void *next = &((char *)current)[sizeof(*current) + current->length];
         if (next > end) break;
         switch (current->code) {
@@ -95,8 +95,9 @@ static void dhcpServer_onFd(struct dhcpServer *self) {
     }
     if (messageType == NULL) return;
 
-    bool isDiscover = messageType->data[0] == dhcp_DISCOVER;
-    if (!isDiscover && messageType->data[0] != dhcp_REQUEST) return;
+    uint8_t type = *(uint8_t *)&messageType[1];
+    bool isDiscover = type == dhcp_DISCOVER;
+    if (!isDiscover && type != dhcp_REQUEST) return;
 
     int32_t entryIndex = dhcpServer_getEntry(self, &header->clientHwAddr[0], isDiscover);
     if (entryIndex < 0) return;

@@ -1,0 +1,19 @@
+#!/bin/sh --
+set -eax
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+recipe_init "../hc/bootstrap/make ../hc/bootstrap/xz host_m4"
+
+pkg="bison-3.8.2"
+URL="https://ftp.gnu.org/gnu/bison/$pkg.tar.xz"
+SHA512="d4d23af6671406e97257892f90651b67f2ab95219831372be032190b7156c10a3435d457857e677445df8b2327aacccc15344acbbc3808a6f332a93cce23b444"
+
+recipe_start
+export PATH="$PWD/make-out/bin:$PWD/xz-out/bin:$PWD/host_m4-out/bin:$PATH"
+rm -rf "./$pkg"; xz -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
+
+./configure --prefix="$RECIPE_OUT" --disable-dependency-tracking --disable-nls --disable-yacc --without-libiconv-prefix --without-libintl-prefix --without-libreadline-prefix --without-libtextstyle-prefix
+make -j "$NUM_CPUS" install
+
+cd ..; rm -rf "./$pkg"
+recipe_finish

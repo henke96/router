@@ -150,7 +150,7 @@ static void dhcpClient_onFd(void) {
     struct dhcp_option *router = NULL;
     struct dhcp_option *dns = NULL;
     struct dhcp_option *leaseTime = NULL;
-    for (struct dhcp_option *current = (void *)&header->options[0];;) {
+    for (struct dhcp_option *current = (void *)&header[1];;) {
         void *next = (void *)current + sizeof(*current) + current->length;
         if (next > end) break;
         switch (current->code) {
@@ -179,7 +179,7 @@ static void dhcpClient_onFd(void) {
     }
     if (messageType == NULL) return;
 
-    switch (messageType->data[0]) {
+    switch (*(uint8_t *)&messageType[1]) {
         case dhcp_OFFER: {
             if (leaseTime == NULL) return;
 
@@ -231,7 +231,7 @@ static void dhcpClient_onFd(void) {
                 },
                 .endOpt = dhcp_END
             };
-            hc_MEMCPY(&requestMsg.leaseTime, &leaseTime->data[0], sizeof(requestMsg.leaseTime));
+            hc_MEMCPY(&requestMsg.leaseTime, &leaseTime[1], sizeof(requestMsg.leaseTime));
             hc_MEMCPY(&requestMsg.serverId, &header->serverIp, sizeof(requestMsg.serverId));
             hc_MEMCPY(&requestMsg.hdr.clientHwAddr, &dhcpClient.ifreq.ifr_addr[2], 6);
             hc_MEMCPY(&requestMsg.requestedIp, &header->yourIp, sizeof(requestMsg.requestedIp));
@@ -257,11 +257,11 @@ static void dhcpClient_onFd(void) {
         case dhcp_ACK: {
             if (subnetMask == NULL || router == NULL || leaseTime == NULL) return;
             if (dns != NULL) {
-                hc_MEMCPY(&dhcpClient.dnsIp, &dns->data[0], 4);
+                hc_MEMCPY(&dhcpClient.dnsIp, &dns[1], 4);
             } else dhcpClient.dnsIp = 0;
 
             uint32_t leaseTimeValue;
-            hc_MEMCPY(&leaseTimeValue, &leaseTime->data[0], 4);
+            hc_MEMCPY(&leaseTimeValue, &leaseTime[1], 4);
             leaseTimeValue = hc_BSWAP32(leaseTimeValue);
 
             // Set timeout to half of the lease time, rounded up.
@@ -269,7 +269,7 @@ static void dhcpClient_onFd(void) {
             CHECK(sys_timerfd_settime(dhcpClient.timerFd, 0, &timeout, NULL), RES == 0);
 
             uint32_t netmask;
-            hc_MEMCPY(&netmask, &subnetMask->data[0], 4);
+            hc_MEMCPY(&netmask, &subnetMask[1], 4);
             dhcpClient.leasedIpNetmask = hc_POPCOUNT32(netmask);
 
             // Record new IP lease and renew-server.
@@ -351,7 +351,7 @@ static void dhcpClient_onFd(void) {
                         .nla_type = RTA_GATEWAY
                     }
                 };
-                hc_MEMCPY(&request.gateway, &router->data[0], sizeof(request.gateway));
+                hc_MEMCPY(&request.gateway, &router[1], sizeof(request.gateway));
                 struct iovec_const iov[] = { { &request, sizeof(request) } };
                 netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
             }

@@ -1,0 +1,11 @@
+#!/bin/sh --
+set -eax
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+recipe_init ""
+
+FILE_DEPENDENCIES="$(cd "$SCRIPT_DIR"; find ../hc/src -name "*.c" -print -o -name "*.h" -print)"
+
+recipe_start
+mkdir "$RECIPE_OUT"
+recipe_finish

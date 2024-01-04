@@ -7,8 +7,8 @@ nod /dev/console 0600 0 0 c 5 1
 dir /lib 0755 0 0
 dir /lib/firmware 0755 0 0
 
-file /init ../init/${ARCH}/${DEBUG_PREFIX}init.elf 0755 0 0
-file /router ../router/${ARCH}/${DEBUG_PREFIX}router.elf 0755 0 0
-file /lib/firmware/iwlwifi-cc-a0-77.ucode ../linux-firmware/iwlwifi-cc-a0-77.ucode 0755 0 0
-file /lib/firmware/regulatory.db ../wireless-regdb/regulatory.db 0755 0 0
-file /hostapd ../hostapd/hostapd 0755 0 0
+file /init ../init-out/${ARCH}/${DEBUG_PREFIX}init 0755 0 0
+file /router ../router-out/${ARCH}/${DEBUG_PREFIX}router 0755 0 0
+file /lib/firmware/iwlwifi-cc-a0-77.ucode ../linux-firmware-out/iwlwifi-cc-a0-77.ucode 0755 0 0
+file /lib/firmware/regulatory.db ../wireless-regdb-out/regulatory.db 0755 0 0
+file /hostapd ../hostapd-out/hostapd 0755 0 0

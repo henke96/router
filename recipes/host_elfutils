@@ -1,8 +1,8 @@
 #!/bin/sh --
 set -eax
-cd -- "${0%/*}/"
-. ../hc/bootstrap/recipe.sh
-recipe_init "../hc/bootstrap/make.sh ./host_bzip2.sh ./host_m4.sh" ""
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+recipe_init "../hc/bootstrap/make host_llvm host_bzip2 host_m4"
 
 pkg="elfutils-0.189"
 URL="https://sourceware.org/elfutils/ftp/0.189/$pkg.tar.bz2"
@@ -10,10 +10,11 @@ SHA512="93a877e34db93e5498581d0ab2d702b08c0d87e4cafd9cec9d6636dfa85a168095c305c1
 FILE_DEPENDENCIES="files/elfutils/dummylib.c files/elfutils/libintl.h"
 
 recipe_start
+export PATH="$PWD/make-out/bin:$PWD/host_bzip2-out/bin:$PWD/host_m4-out/bin:$PATH"
 rm -rf "./$pkg"; bzip2 -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
 
 # Trick configure script to avoid unneeded dependencies.
-"$CC" -shared -o ./libfts.so ../files/elfutils/dummylib.c
+"$CC" -shared -o ./libfts.so "$SCRIPT_DIR/files/elfutils/dummylib.c"
 cp ./libfts.so ./libargp.so
 cp ./libfts.so ./libobstack.so
 cp ./libfts.so ./libz.so
@@ -24,10 +25,10 @@ mv ./sed.temp ./libelf/Makefile.in
 sed -e 's/__libelf_decompress_elf (strscn, &zsize, &zalign)/NULL/' ./libelf/elf_strptr.c > ./sed.temp
 mv ./sed.temp ./libelf/elf_strptr.c
 
-./configure --prefix="$SCRIPT_DIR/$RECIPE_NAME" --disable-dependency-tracking --disable-demangler --disable-nls --without-valgrind --without-bzlib --without-lzma --without-zstd --without-libiconv-prefix --without-libintl-prefix --disable-debuginfod --disable-libdebuginfod --disable-symbol-versioning \
-CFLAGS="-Wno-error" LDFLAGS="-L$(pwd)"
-cp ../files/elfutils/libintl.h ./libelf/libintl.h
-ar r ./lib/libeu.a
+./configure --prefix="$RECIPE_OUT" --disable-dependency-tracking --disable-demangler --disable-nls --without-valgrind --without-bzlib --without-lzma --without-zstd --without-libiconv-prefix --without-libintl-prefix --disable-debuginfod --disable-libdebuginfod --disable-symbol-versioning CFLAGS="-Wno-error" LDFLAGS="-L$PWD"
+
+cp "$SCRIPT_DIR/files/elfutils/libintl.h" ./libelf/
+../host_llvm-out/bin/llvm-ar r ./lib/libeu.a
 make -C libelf -j "$NUM_CPUS" install
 
 cd ..; rm -rf "./$pkg"
