@@ -2,9 +2,10 @@
 set -eax
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
-recipe_init "../hc/bootstrap/make ../hc/bootstrap/xz"
 
 pkg="perl-5.38.2"
+DEPENDENCIES="../hc/bootstrap/make ../hc/bootstrap/xz"
+FILE_DEPENDENCIES=""
 URL="https://www.cpan.org/src/5.0/$pkg.tar.xz"
 SHA512="0ca51e447c7a18639627c281a1c7ae6662c773745ea3c86bede46336d5514ecc97ded2c61166e1ac15635581489dc596368907aa3a775b34db225b76d7402d10"
 

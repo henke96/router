@@ -2,12 +2,12 @@
 set -eax
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
-recipe_init "../hc/bootstrap/make host_llvm musl libnl3"
 
 pkg="hostapd-2.10"
+DEPENDENCIES="../hc/bootstrap/make host_llvm musl libnl3"
+FILE_DEPENDENCIES="files/hostapd/.config"
 URL="https://w1.fi/releases/$pkg.tar.gz"
 SHA512="243baa82d621f859d2507d8d5beb0ebda15a75548a62451dc9bca42717dcc8607adac49b354919a41d8257d16d07ac7268203a79750db0cfb34b51f80ff1ce8f"
-FILE_DEPENDENCIES="files/hostapd/.config"
 
 recipe_start
 musl_out="$PWD/musl-out"

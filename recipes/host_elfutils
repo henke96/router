@@ -2,12 +2,12 @@
 set -eax
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
-recipe_init "../hc/bootstrap/make host_llvm host_bzip2 host_m4"
 
 pkg="elfutils-0.189"
+DEPENDENCIES="../hc/bootstrap/make host_llvm host_bzip2 host_m4"
+FILE_DEPENDENCIES="files/elfutils/dummylib.c files/elfutils/libintl.h"
 URL="https://sourceware.org/elfutils/ftp/0.189/$pkg.tar.bz2"
 SHA512="93a877e34db93e5498581d0ab2d702b08c0d87e4cafd9cec9d6636dfa85a168095c305c11583a5b0fb79374dd93bc8d0e9ce6016e6c172764bcea12861605b71"
-FILE_DEPENDENCIES="files/elfutils/dummylib.c files/elfutils/libintl.h"
 
 recipe_start
 export PATH="$PWD/make-out/bin:$PWD/host_bzip2-out/bin:$PWD/host_m4-out/bin:$PATH"
