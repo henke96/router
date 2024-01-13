@@ -1,21 +1,23 @@
 #!/bin/sh --
-set -eax
+set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
 pkg="busybox-1.36.1"
+url="https://busybox.net/downloads/$pkg.tar.bz2"
+sha512="8c0c754c9ae04b5e6b23596283a7d3a4ef96225fe179f92d6f6a99c69c0caa95b1aa56c267f52d7c807f6cc69e1f0b7dd29a8ac624098f601738f8c0c57980d4"
+
 DEPENDENCIES="../hc/bootstrap/make host_bzip2"
-FILE_DEPENDENCIES="files/host_busybox/.config"
-URL="https://busybox.net/downloads/$pkg.tar.bz2"
-SHA512="8c0c754c9ae04b5e6b23596283a7d3a4ef96225fe179f92d6f6a99c69c0caa95b1aa56c267f52d7c807f6cc69e1f0b7dd29a8ac624098f601738f8c0c57980d4"
+DIR_DEPENDENCIES="files/host_busybox"
 
 recipe_start
-export PATH="$PWD/make-out/bin:$PWD/host_bzip2-out/bin:$PATH"
-rm -rf "./$pkg"; bzip2 -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
+export PATH="$OUT/make/bin:$OUT/host_bzip2/bin:$PATH"
+bzip2 -d -c "$(recipe_download "$url" "$sha512")" | tar xf -
+cd "./$pkg"
 
 cp "$SCRIPT_DIR/files/host_busybox/.config" .
 make -j "$NUM_CPUS" HOSTCC="$CC" CC="$CC"
 make -j "$NUM_CPUS" install HOSTCC="$CC" CC="$CC"
 
-cd ..; rm -rf "./$pkg"
+rm -rf "$PWD"
 recipe_finish

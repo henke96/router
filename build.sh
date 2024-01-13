@@ -7,5 +7,5 @@ mkdir -p "$OUT"
 "$script_dir/recipes/bootloader"
 
 mkdir -p "$script_dir/out/efi/boot"
-cp "$OUT/bootloader-out/x86_64/bootloader.efi" "$script_dir/out/efi/boot/bootx64.efi"
-cp "$OUT/bootloader-out/x86_64/debug-bootloader.efi" "$script_dir/out/efi/boot/debug-bootx64.efi"
+cp "$OUT/bootloader/x86_64/bootloader.efi" "$script_dir/out/efi/boot/bootx64.efi"
+cp "$OUT/bootloader/x86_64/debug-bootloader.efi" "$script_dir/out/efi/boot/debug-bootx64.efi"

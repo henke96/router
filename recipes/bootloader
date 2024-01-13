@@ -1,20 +1,13 @@
 #!/bin/sh --
-set -eax
+set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
 DEPENDENCIES="host_llvm linux"
-FILE_DEPENDENCIES=""
-URL=""
-SHA512=""
+DIR_DEPENDENCIES="../hc ../bootloader"
 
 recipe_start
-export NO_AARCH64=1 LLVM="$PWD/host_llvm-out"
-export FLAGS="-I$PWD/linux-out"
-"$SCRIPT_DIR/../hc/tools/build/efi.sh" "$SCRIPT_DIR/../bootloader/bootloader.c" bootloader
-mkdir "$RECIPE_OUT"
-mv "$SCRIPT_DIR/../hc-out/bootloader/x86_64" "$RECIPE_OUT/"
-
-FILE_DEPENDENCIES="$(cd "$SCRIPT_DIR"; "$LLVM/bin/clang" -I../hc/src -M ../bootloader/bootloader.c)"
-FILE_DEPENDENCIES="$(echo "${FILE_DEPENDENCIES#*:}" | sed 's/\\//g')"
+export NO_AARCH64=1 LLVM="$OUT/host_llvm" FLAGS="-I$OUT/linux"
+"$SCRIPT_DIR/../hc/tools/build/efi.sh" "$SCRIPT_DIR/../bootloader/bootloader.c" bootloader .efi
+mv "$SCRIPT_DIR/../hc-out/bootloader/x86_64" .
 recipe_finish

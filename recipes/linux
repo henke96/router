@@ -1,47 +1,47 @@
 #!/bin/sh --
-set -eax
+set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
 pkg="linux-6.6"
+url="https://www.kernel.org/pub/linux/kernel/v6.x/$pkg.tar.xz"
+sha512="458b2c34d46206f9b4ccbac54cc57aeca1eaecaf831bc441e59701bac6eadffc17f6ce24af6eadd0454964e843186539ac0d63295ad2cc32d112b60360c39a35"
+
 DEPENDENCIES="../hc/bootstrap/make ../hc/bootstrap/xz host_llvm host_busybox host_flex host_bison host_elfutils host_perl linux-firmware wireless-regdb init router hostapd"
-FILE_DEPENDENCIES="files/linux/initramfs files/linux/.config"
-URL="https://www.kernel.org/pub/linux/kernel/v6.x/$pkg.tar.xz"
-SHA512="458b2c34d46206f9b4ccbac54cc57aeca1eaecaf831bc441e59701bac6eadffc17f6ce24af6eadd0454964e843186539ac0d63295ad2cc32d112b60360c39a35"
+DIR_DEPENDENCIES="files/linux"
 
 recipe_start
-elfutils_out="$PWD/host_elfutils-out"
-export PATH="$PWD/make-out/bin:$PWD/xz-out/bin:$PWD/host_llvm-out/bin:$PWD/host_busybox-out/bin:$PWD/host_flex-out/bin:$PWD/host_bison-out/bin:$PWD/host_elfutils-out/bin:$PWD/host_perl-out/bin:$PATH"
-rm -rf "./$pkg"; xz -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
+export PATH="$OUT/make/bin:$OUT/xz/bin:$OUT/host_llvm/bin:$OUT/host_busybox/bin:$OUT/host_flex/bin:$OUT/host_bison/bin:$OUT/host_elfutils/bin:$OUT/host_perl/bin:$PATH"
+xz -d -c "$(recipe_download "$url" "$sha512")" | tar xf -
+cd "./$pkg"
 
 export KBUILD_BUILD_TIMESTAMP="1970-01-01" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64
-export HOSTCFLAGS="-I$elfutils_out/include" HOSTLDFLAGS="-Wl,-rpath,$elfutils_out/lib -L$elfutils_out/lib"
+export HOSTCFLAGS="-I$OUT/host_elfutils/include" HOSTLDFLAGS="-Wl,-rpath,$OUT/host_elfutils/lib -L$OUT/host_elfutils/lib"
 llvm_tools="CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump READELF=llvm-readelf"
 cp "$SCRIPT_DIR/files/linux/.config" .
 
 # Set reproducible timestamps for initramfs.
-touch -t 197001010000.00 ../linux-firmware-out/iwlwifi-cc-a0-72.ucode
-touch -t 197001010000.00 ../wireless-regdb-out/regulatory.db
-touch -t 197001010000.00 ../hostapd-out/hostapd
-touch -t 197001010000.00 ../init-out/$ARCH/init
-touch -t 197001010000.00 ../init-out/$ARCH/debug-init
-touch -t 197001010000.00 ../router-out/$ARCH/router
-touch -t 197001010000.00 ../router-out/$ARCH/debug-router
+touch -t 197001010000.00 "$OUT/linux-firmware/bin/iwlwifi-cc-a0-77.ucode"
+touch -t 197001010000.00 "$OUT/wireless-regdb/bin/regulatory.db"
+touch -t 197001010000.00 "$OUT/hostapd/hostapd"
+touch -t 197001010000.00 "$OUT/init/$ARCH/init"
+touch -t 197001010000.00 "$OUT/init/$ARCH/debug-init"
+touch -t 197001010000.00 "$OUT/router/$ARCH/router"
+touch -t 197001010000.00 "$OUT/router/$ARCH/debug-router"
 
 make -j "$NUM_CPUS" -C ./usr gen_init_cpio CC="$CC"
 
 # Build release image.
 export DEBUG_PREFIX=
-./usr/gen_init_cpio "$SCRIPT_DIR/files/linux/initramfs" > ./initramfs.cpio
+./usr/gen_init_cpio -t 0 "$SCRIPT_DIR/files/linux/initramfs" > ./initramfs.cpio
 make -j "$NUM_CPUS" $llvm_tools HOSTCC="$CC"
-mkdir "$RECIPE_OUT"
-mv arch/x86/boot/bzImage "$RECIPE_OUT"
+mv arch/x86/boot/bzImage "$OUT/$SCRIPT_NAME/"
 
 # Build debug image.
 export DEBUG_PREFIX=debug-
-./usr/gen_init_cpio "$SCRIPT_DIR/files/linux/initramfs" > ./initramfs.cpio
+./usr/gen_init_cpio -t 0 "$SCRIPT_DIR/files/linux/initramfs" > ./initramfs.cpio
 make -j "$NUM_CPUS" $llvm_tools HOSTCC="$CC"
-mv arch/x86/boot/bzImage "$RECIPE_OUT/debug-bzImage"
+mv arch/x86/boot/bzImage "$OUT/$SCRIPT_NAME/debug-bzImage"
 
-cd ..; rm -rf "./$pkg"
+rm -rf "$PWD"
 recipe_finish

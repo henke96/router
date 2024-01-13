@@ -1,26 +1,24 @@
 #!/bin/sh --
-set -eax
+set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
 pkg="llvm-project-16.0.6.src"
+url="https://github.com/llvm/llvm-project/releases/download/llvmorg-16.0.6/$pkg.tar.xz"
+sha512="89a67ebfbbc764cc456e8825ecfa90707741f8835b1b2adffae0b227ab1fe5ca9cce75b0efaffc9ca8431cae528dc54fd838867a56a2b645344d9e82d19ab1b7"
+
 DEPENDENCIES="../hc/bootstrap/make ../hc/bootstrap/xz ../hc/bootstrap/cmake ../hc/bootstrap/python ./host_llvm musl linux-headers"
-FILE_DEPENDENCIES=""
-URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-16.0.6/$pkg.tar.xz"
-SHA512="89a67ebfbbc764cc456e8825ecfa90707741f8835b1b2adffae0b227ab1fe5ca9cce75b0efaffc9ca8431cae528dc54fd838867a56a2b645344d9e82d19ab1b7"
 
 recipe_start
-musl_out="$PWD/musl-out"
-linux_headers_out="$PWD/linux-headers-out"
-host_llvm_out="$PWD/host_llvm-out"
-export PATH="$host_llvm_out/bin:$PWD/make-out/bin:$PWD/xz-out/bin:$PWD/python-out/bin:$PWD/cmake-out/bin:$PATH"
-rm -rf "./$pkg"; xz -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
+export PATH="$OUT/host_llvm/bin:$OUT/make/bin:$OUT/xz/bin:$OUT/python/bin:$OUT/cmake/bin:$PATH"
+xz -d -c "$(recipe_download "$url" "$sha512")" | tar xf -
+cd "./$pkg"
 
 arch=x86_64
 cmake -S runtimes -B libcxxbuild -G "Unix Makefiles" -Wno-dev \
--DCMAKE_INSTALL_PREFIX="$RECIPE_OUT" \
+-DCMAKE_INSTALL_PREFIX="$OUT/$SCRIPT_NAME" \
 -DCMAKE_MAKE_PROGRAM=make -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang \
--DCMAKE_SYSROOT="$musl_out/$arch" \
+-DCMAKE_SYSROOT="$OUT/musl/$arch" \
 -DCMAKE_BUILD_TYPE=Release \
 -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_DOCS=OFF \
 -DLLVM_HOST_TRIPLE="x86_64-unknown-linux-musl" \
@@ -28,7 +26,7 @@ cmake -S runtimes -B libcxxbuild -G "Unix Makefiles" -Wno-dev \
 -DLIBCXX_ENABLE_STATIC=ON \
 -DLIBCXX_ENABLE_SHARED=OFF \
 -DLIBCXX_HAS_MUSL_LIBC=ON \
--DLIBCXX_ADDITIONAL_COMPILE_FLAGS="-I$linux_headers_out/$arch" \
+-DLIBCXX_ADDITIONAL_COMPILE_FLAGS="-I$OUT/linux-headers/$arch" \
 -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
 -DLIBCXX_CXX_ABI="libcxxabi" \
 -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON \
@@ -46,26 +44,26 @@ make -C libcxxbuild -j "$NUM_CPUS" install
 cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
 -DCMAKE_SYSTEM_NAME="Linux" \
 -DLLVM_HOST_TRIPLE="x86_64-unknown-linux-musl" \
--DLLVM_NATIVE_TOOL_DIR="$host_llvm_out/bin" \
+-DLLVM_NATIVE_TOOL_DIR="$OUT/host_llvm/bin" \
 -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
 -DLLVM_BUILD_STATIC=ON \
 -DCMAKE_MAKE_PROGRAM=make -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
--DCMAKE_INSTALL_PREFIX="$RECIPE_OUT" \
+-DCMAKE_INSTALL_PREFIX="$OUT/$SCRIPT_NAME" \
 -DCMAKE_BUILD_TYPE=Release \
 -DLLVM_APPEND_VC_REV=OFF \
 -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_UTILS=OFF \
--DLLVM_ENABLE_DOXYGEN=OFF -DLLVM_ENABLE_FFI=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_CURL=OFF -DLLVM_ENABLE_LIBEDIT=OFF -DLLVM_ENABLE_LIBPFM=OFF -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_BINDINGS=OFF -DLLVM_ENABLE_UNWIND_TABLES=OFF -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_HAVE_LIBXAR=OFF -DCLANG_ENABLE_ARCMT=OFF \
+-DLLVM_ENABLE_DOXYGEN=OFF -DLLVM_ENABLE_FFI=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_Curl=OFF -DLLVM_ENABLE_LIBEDIT=OFF -DLLVM_ENABLE_LIBPFM=OFF -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_BINDINGS=OFF -DLLVM_ENABLE_UNWIND_TABLES=OFF -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_HAVE_LIBXAR=OFF -DCLANG_ENABLE_ARCMT=OFF \
 -DLLVM_ENABLE_PROJECTS="clang;lld" \
 -DLLVM_TARGETS_TO_BUILD="X86" \
 -DLLVM_DEFAULT_TARGET_TRIPLE="x86_64-unknown-linux-musl" \
 -DDEFAULT_SYSROOT="/TODO" -DCLANG_DEFAULT_LINKER="lld" -DCLANG_DEFAULT_RTLIB="compiler-rt" \
--DCMAKE_SYSROOT="$musl_out/$arch" \
--DCMAKE_CXX_FLAGS="-I$RECIPE_OUT/include -I$RECIPE_OUT/include/c++/v1" \
--DCMAKE_EXE_LINKER_FLAGS="-L$RECIPE_OUT/lib"
+-DCMAKE_SYSROOT="$OUT/musl/$arch" \
+-DCMAKE_CXX_FLAGS="-I$OUT/$SCRIPT_NAME/include -I$OUT/$SCRIPT_NAME/include/c++/v1" \
+-DCMAKE_EXE_LINKER_FLAGS="-L$OUT/$SCRIPT_NAME/lib"
 make -C build -j "$NUM_CPUS" install-clang install-lld
 
-llvm-objcopy --strip-sections "$RECIPE_OUT/bin/clang-16"
-llvm-objcopy --strip-sections "$RECIPE_OUT/bin/lld"
+llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/clang-16"
+llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/lld"
 
-cd ..; rm -rf "./$pkg"
+rm -rf "$PWD"
 recipe_finish

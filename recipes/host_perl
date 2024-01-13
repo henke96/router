@@ -1,20 +1,21 @@
 #!/bin/sh --
-set -eax
+set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
 pkg="perl-5.38.2"
+url="https://www.cpan.org/src/5.0/$pkg.tar.xz"
+sha512="0ca51e447c7a18639627c281a1c7ae6662c773745ea3c86bede46336d5514ecc97ded2c61166e1ac15635581489dc596368907aa3a775b34db225b76d7402d10"
+
 DEPENDENCIES="../hc/bootstrap/make ../hc/bootstrap/xz"
-FILE_DEPENDENCIES=""
-URL="https://www.cpan.org/src/5.0/$pkg.tar.xz"
-SHA512="0ca51e447c7a18639627c281a1c7ae6662c773745ea3c86bede46336d5514ecc97ded2c61166e1ac15635581489dc596368907aa3a775b34db225b76d7402d10"
 
 recipe_start
-export PATH="$PWD/make-out/bin:$PWD/xz-out/bin:$PATH"
-rm -rf "./$pkg"; xz -d -c "$DOWNLOAD" | tar xf -; cd "./$pkg"
+export PATH="$OUT/make/bin:$OUT/xz/bin:$PATH"
+xz -d -c "$(recipe_download "$url" "$sha512")" | tar xf -
+cd "./$pkg"
 
-./Configure -des -Dman1dir=none -Dman3dir=none -Dprefix="$RECIPE_OUT"
+./Configure -des -Dman1dir=none -Dman3dir=none -Dprefix="$OUT/$SCRIPT_NAME"
 make -j "$NUM_CPUS" install
 
-cd ..; rm -rf "./$pkg"
+rm -rf "$PWD"
 recipe_finish

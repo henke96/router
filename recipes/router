@@ -1,19 +1,13 @@
 #!/bin/sh --
-set -eax
+set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
 DEPENDENCIES="host_llvm"
-FILE_DEPENDENCIES="$(cd "$SCRIPT_DIR"; find ../router -name "*.c" -print -o -name "*.h" -print)"
-URL=""
-SHA512=""
+DIR_DEPENDENCIES="../hc ../router"
 
 recipe_start
-export NO_AARCH64=1 NO_RISCV64=1 LLVM="$PWD/host_llvm-out"
+export NO_AARCH64=1 NO_RISCV64=1 LLVM="$OUT/host_llvm"
 "$SCRIPT_DIR/../hc/tools/build/elf.sh" "$SCRIPT_DIR/../router/router.c" router
-mkdir "$RECIPE_OUT"
-mv "$SCRIPT_DIR/../hc-out/router/x86_64" "$RECIPE_OUT/"
-
-FILE_DEPENDENCIES="$(cd "$SCRIPT_DIR"; "$LLVM/bin/clang" -I../hc/src -M ../router/router.c)"
-FILE_DEPENDENCIES="$(echo "${FILE_DEPENDENCIES#*:}" | sed 's/\\//g')"
+mv "$SCRIPT_DIR/../hc-out/router/x86_64" .
 recipe_finish
