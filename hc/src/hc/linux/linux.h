@@ -139,6 +139,10 @@ static_assert(!hc_ILP32, "Pointers not 64 bit");
 #define ERFKILL 132 // Operation not possible due to RF-kill
 #define EHWPOISON 133 // Memory page has hardware error
 
+// limits.h
+#define NAME_MAX 255 /* # chars in a file name */
+#define PATH_MAX 4096 /* # chars in a path name including nul */
+
 // net.h
 #define SOCK_STREAM 1
 #define SOCK_DGRAM 2
@@ -3821,8 +3825,8 @@ struct linux_dirent64 {
     int64_t d_off; /* 64-bit offset to next structure */
     uint16_t d_reclen; /* Size of this dirent */
     uint8_t d_type; /* File type */
-    // char d_name[]; /* Filename (null-terminated) */
-} hc_PACKED(1);
+    char d_name[5]; /* Filename (null-terminated) */
+};
 
 // fs.h
 #define SEEK_SET 0 /* seek relative to beginning of file */

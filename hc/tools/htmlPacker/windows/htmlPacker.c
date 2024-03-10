@@ -3,35 +3,35 @@
 #include "hc/util.c"
 #include "hc/base64.c"
 #include "hc/debug.h"
-#include "hc/compiler_rt/libc.c"
+#include "hc/compilerRt/mem.c"
 #include "hc/windows/windows.h"
+#include "hc/windows/util.c"
 #include "hc/windows/debug.c"
 #include "hc/windows/heap.c"
 #include "hc/windows/_start.c"
-
 static struct SYSTEMINFO systemInfo;
 #define allocator_PAGE_SIZE systemInfo.pageSize
 #include "hc/allocator.c"
 
 #include "../common.c"
 
-void initialise(hc_UNUSED char **envp) {
+static void initPageSize(hc_UNUSED char **envp) {
     GetSystemInfo(&systemInfo);
 }
 
 // Convert utf8 (optionally null terminated if `utf8Length` is -1) into null terminated utf16.
-// Returns result length (negative on error). Result is placed at the end of `alloc.mem`.
-static int32_t utf8ToUtf16(char *utf8, int32_t utf8Length) {
+static uint16_t *utf8ToUtf16(char *utf8, int32_t utf8Length) {
     int32_t utf16Count = MultiByteToWideChar(
         CP_UTF8, MB_ERR_INVALID_CHARS,
         utf8, utf8Length,
         NULL, 0
     );
-    if (utf16Count <= 0) return -1;
+    if (utf16Count <= 0) return NULL;
 
-    uint16_t *utf16Z = &alloc.mem[alloc.size];
+    int64_t alignedAllocOffset = math_ALIGN_FORWARD(alloc.size, 2);
+    uint16_t *utf16Z = &alloc.mem[alignedAllocOffset];
     int32_t utf16ZCount = utf16Count + (utf8Length != -1);
-    if (allocator_resize(&alloc, alloc.size + utf16ZCount * (int64_t)sizeof(uint16_t)) < 0) return -1;
+    if (allocator_resize(&alloc, alignedAllocOffset + utf16ZCount * (int64_t)sizeof(uint16_t)) < 0) return NULL;
 
     if (
         MultiByteToWideChar(
@@ -39,31 +39,31 @@ static int32_t utf8ToUtf16(char *utf8, int32_t utf8Length) {
             utf8, utf8Length,
             utf16Z, utf16Count
         ) != utf16Count
-    ) return -1;
+    ) return NULL;
     utf16Z[utf16ZCount - 1] = u'\0';
-    return utf16ZCount;
+    return utf16Z;
 }
 
 static int32_t changeDir(char *path) {
-    uint16_t *pathZ = &alloc.mem[alloc.size];
-    if (utf8ToUtf16(path, -1) < 0) return -1;
+    uint16_t *pathZ = utf8ToUtf16(path, -1);
+    if (pathZ == NULL) return -1;
 
     if (!SetCurrentDirectoryW(pathZ)) return -1;
     return 0;
 }
 
 static int32_t replaceWithFile(int64_t replaceIndex, int64_t replaceLen, char *path, int32_t pathLen, bool asBase64) {
-    uint16_t *pathZ = &alloc.mem[alloc.size];
-    if (utf8ToUtf16(path, pathLen) < 0) return -1;
+    uint16_t *pathZ = utf8ToUtf16(path, pathLen);
+    if (pathZ == NULL) return -1;
 
     // Open file and get size.
     void *pathHandle = CreateFileW(
         pathZ,
         GENERIC_READ,
-        0,
+        FILE_SHARE_READ,
         NULL,
         OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
+        0,
         NULL
     );
     if (pathHandle == INVALID_HANDLE_VALUE) return -2;
@@ -130,8 +130,8 @@ static int32_t replaceWithFile(int64_t replaceIndex, int64_t replaceLen, char *p
 }
 
 static int32_t writeToFile(char *path, char *content, int64_t contentLen) {
-    uint16_t *pathZ = &alloc.mem[alloc.size];
-    if (utf8ToUtf16(path, -1) < 0) return -1;
+    uint16_t *pathZ = utf8ToUtf16(path, -1);
+    if (pathZ == NULL) return -1;
 
     void *pathHandle = CreateFileW(
         pathZ,
@@ -144,22 +144,12 @@ static int32_t writeToFile(char *path, char *content, int64_t contentLen) {
     );
     if (pathHandle == INVALID_HANDLE_VALUE) return -4;
 
-    int32_t status;
-    int64_t remaining = contentLen;
-    while (remaining > 0) {
-        int64_t index = contentLen - remaining;
-        uint32_t toWrite = UINT32_MAX;
-        if (remaining < UINT32_MAX) toWrite = (uint32_t)remaining;
-
-        uint32_t written;
-        if (WriteFile(pathHandle, &content[index], toWrite, &written, NULL) == 0) {
-            status = -5;
-            goto cleanup_pathHandle;
-        }
-        remaining -= written;
+    int32_t status = util_writeAll(pathHandle, content, contentLen);
+    if (status < 0) {
+        status = -5;
+        goto cleanup_pathHandle;
     }
 
-    status = 0;
     cleanup_pathHandle:
     debug_CHECK(CloseHandle(pathHandle), RES != 0);
     return status;

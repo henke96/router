@@ -21,26 +21,23 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
     #error "Unsupported architecture"
 #endif
 
-#if defined(_WIN32)
-    #define hc_PE 1
-#elif defined(__linux__)
-    #define hc_ELF 1
-#endif
-
 // Are size_t, int, long and pointer types 32 bit?
 #if defined(__ILP32__)
     #define hc_ILP32 1
     #define hc_ILP32_PAD(NAME) int32_t NAME;
+    #define hc_LP64_PAD(NAME)
 #else
     #define hc_ILP32 0
     #define hc_ILP32_PAD(NAME)
+    #define hc_LP64_PAD(NAME) int32_t NAME;
 #endif
 
 // Preprocessor helpers.
 #define hc_STR(X) #X
 #define hc_XSTR(X) hc_STR(X)
 #define hc_ARRAY_LEN(ARRAY) (sizeof(ARRAY) / sizeof((ARRAY)[0]))
-#define hc_STR_COMMA_LEN(STR) (STR), (hc_ARRAY_LEN(STR) - 1)
+#define hc_STR_LEN(STR) (hc_ARRAY_LEN(STR) - 1)
+#define hc_STR_COMMA_LEN(STR) (STR), hc_STR_LEN(STR)
 
 // Attributes
 #define hc_WEAK __attribute__((weak))
@@ -64,11 +61,13 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
     #define hc_SYSV_ABI
 #endif
 
+#if defined(_WIN32)
+    #define hc_EXPORT __attribute__((dllexport))
+#else
+    #define hc_EXPORT __attribute__((visibility("default")))
+#endif
 #define hc_DLLIMPORT __attribute__((dllimport))
-#define hc_DLLEXPORT __attribute__((dllexport))
-#define hc_ELF_EXPORT __attribute__((visibility("default")))
 #define hc_WASM_IMPORT(MODULE, NAME) __attribute__((import_module(MODULE), import_name(NAME)))
-#define hc_WASM_EXPORT(NAME) __attribute__((export_name(NAME)))
 
 // Builtins
 #define hc_UNREACHABLE __builtin_unreachable()
@@ -92,7 +91,6 @@ _Static_assert(sizeof(enum {A}) == 4, "enum not 4 bytes");
 #define hc_ROTR64 __builtin_rotateright64
 #define hc_MEMCPY __builtin_memcpy
 #define hc_MEMMOVE __builtin_memmove
-#define hc_MEMCMP __builtin_memcmp
 #define hc_MEMSET __builtin_memset
 #define hc_WASM_MEMORY_SIZE __builtin_wasm_memory_size(0)
 #define hc_WASM_MEMORY_GROW(DELTA) __builtin_wasm_memory_grow(0, DELTA)

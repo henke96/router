@@ -5,7 +5,7 @@
 #include "hc/elf.h"
 #include "hc/x11.h"
 #include "hc/debug.h"
-#include "hc/compiler_rt/libc.c"
+#include "hc/compilerRt/mem.c"
 #include "hc/linux/linux.h"
 #include "hc/linux/sys.c"
 #include "hc/linux/debug.c"
@@ -14,15 +14,15 @@
 static int32_t openGl_pageSize;
 #define x11Client_PAGE_SIZE openGl_pageSize
 #include "hc/linux/x11Client.c"
-#include "hc/linux/gnulinux/libc.so.6.h"
-#include "hc/linux/gnulinux/libdl.so.2.h"
+#include "hc/linux/gnu/libc.so.6.h"
+#include "hc/linux/gnu/libdl.so.2.h"
 #include "hc/egl.h"
 #include "hc/linux/egl.c"
 #include "hc/linux/gbm.c"
 #include "hc/linux/drmKms.c"
-#include "hc/linux/gnulinux/_start.c"
+#include "hc/linux/gnu/_start.c"
 
-#define game_EXPORT(NAME) static
+#define game_EXPORT static
 #define gl_GET_PROC_ADDR(LOADER_PTR, FUNC) egl_getProcAddress(LOADER_PTR, FUNC)
 #include "../shared/gl.c"
 #include "../shaders.c"

@@ -757,10 +757,10 @@ static int32_t ed25519_ge_unpackNegativeVartime(struct ed25519_ge *r, const void
     curve25519_mul(&t[0], &t[0], &den[0]);
     curve25519_subNoReduceFourP(&root[0], &t[0], &num[0]);
     curve25519_reduce(&root[0]);
-    if (hc_MEMCMP(&root[0], &curve25519_zero[0], 5 * sizeof(uint64_t)) != 0) {
+    if (mem_compare(&root[0], &curve25519_zero[0], 5 * sizeof(uint64_t)) != 0) {
         curve25519_addNoReduce(&t[0], &t[0], &num[0]);
         curve25519_reduce(&t[0]);
-        if (hc_MEMCMP(&t[0], &curve25519_zero[0], 5 * sizeof(uint64_t)) != 0) return 0;
+        if (mem_compare(&t[0], &curve25519_zero[0], 5 * sizeof(uint64_t)) != 0) return 0;
         curve25519_mul(&r->x[0], &r->x[0], &ed25519_ge_sqrtneg1[0]);
     }
 
@@ -891,7 +891,7 @@ static void _ed25519_extSecret(uint8_t *extSecret, const void *secret) {
     extSecret[31] |= 64;
 }
 
-static void _ed25519_hram(uint8_t *hram, const void *signature, const void *public, const void *message, int64_t messageSize) {
+static void _ed25519_hram(uint8_t *hram, const void *signature, const void *public, const void *message, ssize_t messageSize) {
     struct sha512 sha512;
     sha512_init(&sha512);
     sha512_update(&sha512, signature, 32);
@@ -914,7 +914,7 @@ static void ed25519_public(void *publicOut, const void *secret) {
 }
 
 hc_UNUSED
-static void ed25519_sign(void *signatureOut, const void *message, int64_t messageSize, const void *secret, const void *public) {
+static void ed25519_sign(void *signatureOut, const void *message, ssize_t messageSize, const void *secret, const void *public) {
     uint8_t extSecret[sha512_HASH_SIZE];
     _ed25519_extSecret(&extSecret[0], secret);
 
@@ -952,7 +952,7 @@ static void ed25519_sign(void *signatureOut, const void *message, int64_t messag
 }
 
 // Returns 0 if valid.
-hc_UNUSED static int32_t ed25519_verify(const void *message, int64_t messageSize, const void *public, const void *signature) {
+hc_UNUSED static int32_t ed25519_verify(const void *message, ssize_t messageSize, const void *public, const void *signature) {
     struct ed25519_ge A;
     if ((*(const uint8_t *)(signature + 63) & 224) || !ed25519_ge_unpackNegativeVartime(&A, public)) return 1;
 
@@ -973,7 +973,7 @@ hc_UNUSED static int32_t ed25519_verify(const void *message, int64_t messageSize
     ed25519_ge_pack(&checkR[0], &R);
 
     // Check that R = SB - H(R,A,message)A
-    return hc_MEMCMP(signature, &checkR[0], 32);
+    return mem_compare(signature, &checkR[0], 32);
 }
 
 // X25519 basepoint scalar multiplication.
