@@ -15,8 +15,7 @@ bzip2 -d -c "$(recipe_download "$url_busybox" "$sha512")" | tar xf -
 cd ./busybox-1.36.1
 
 cp "$SCRIPT_DIR/files/busybox/.config" .
-make -j "$NUM_CPUS" menuconfig HOSTCC="$CC"
-exit 1
+make -j "$NUM_CPUS" oldconfig HOSTCC="$CC"
 
 arch=x86_64
 export llvm_tools="CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump READELF=llvm-readelf"
