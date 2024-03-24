@@ -27,7 +27,7 @@ static int32_t dhcpServer_getEntry(struct dhcpServer *self, uint8_t *macAddr, bo
     int32_t oldestIndex = i;
     int64_t oldestTimeSec = self->entries[i].timeSec;
     for (;;) {
-        if (hc_MEMCMP(&macAddr[0], &self->entries[i].macAddr[0], 6) == 0) {
+        if (mem_compare(&macAddr[0], &self->entries[i].macAddr[0], 6) == 0) {
             self->entries[i].timeSec = currentTime.tv_sec;
             return i;
         }
@@ -173,7 +173,7 @@ static void dhcpServer_onFd(struct dhcpServer *self) {
         .sin_addr = { 255, 255, 255, 255 }
     };
     // Unicast if the client says it already has the IP.
-    if (hc_MEMCMP(&header->clientIp[0], &replyMsg.hdr.yourIp[0], 4) == 0) hc_MEMCPY(&destAddr.sin_addr[0], &replyMsg.hdr.yourIp[0], 4);
+    if (mem_compare(&header->clientIp[0], &replyMsg.hdr.yourIp[0], 4) == 0) hc_MEMCPY(&destAddr.sin_addr[0], &replyMsg.hdr.yourIp[0], 4);
 
     debug_CHECK(sys_sendto(self->fd, &replyMsg, sizeof(replyMsg), MSG_NOSIGNAL, &destAddr, sizeof(destAddr)), RES == sizeof(replyMsg));
 }

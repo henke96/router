@@ -3,16 +3,15 @@ set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
-pkg="bzip2-1.0.8"
-url="https://sourceware.org/pub/bzip2/$pkg.tar.gz"
+. "$SCRIPT_DIR/files/urls"
 sha512="083f5e675d73f3233c7930ebe20425a533feedeaaa9d8cc86831312a6581cefbe6ed0d08d2fa89be81082f2a5abdabca8b3c080bf97218a1bd59dc118a30b9f3"
 
-DEPENDENCIES="../hc/bootstrap/make"
+DEPENDENCIES="make"
 
 recipe_start
 export PATH="$OUT/make/bin:$PATH"
-gzip -d -c "$(recipe_download "$url" "$sha512")" | tar xf -
-cd "./$pkg"
+gzip -d -c "$(recipe_download "$url_bzip2" "$sha512")" | tar xf -
+cd ./bzip2-1.0.8
 
 make -j "$NUM_CPUS" install PREFIX="$OUT/$SCRIPT_NAME" CC="$CC"
 

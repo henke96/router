@@ -239,13 +239,13 @@ static void modemClient_onFd(struct modemClient *self) {
         }
 
         // Error.
-        if (lineLength == 5 && hc_MEMCMP(&bufferLineStart[0], hc_STR_COMMA_LEN("ERROR")) == 0) {
+        if (lineLength == 5 && mem_compare(&bufferLineStart[0], hc_STR_COMMA_LEN("ERROR")) == 0) {
             sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("AT error\n"));
             goto out_fail;
         }
 
         // Read SMS.
-        if (lineLength >= 7 && hc_MEMCMP(&bufferLineStart[0], hc_STR_COMMA_LEN("+CMGL: ")) == 0) {
+        if (lineLength >= 7 && mem_compare(&bufferLineStart[0], hc_STR_COMMA_LEN("+CMGL: ")) == 0) {
             // Find end of slot number.
             int32_t slotNumberEnd = 7;
             for (; slotNumberEnd < lineLength; ++slotNumberEnd) {
@@ -288,7 +288,7 @@ static void modemClient_onFd(struct modemClient *self) {
             lineLength += smsSize + 1;
 
             // Check for `ip` command.
-            if (smsLength != 2 || hc_MEMCMP(&bufferLineStart[smsContentIndex], hc_STR_COMMA_LEN("00690070")) != 0) continue;
+            if (smsLength != 2 || mem_compare(&bufferLineStart[smsContentIndex], hc_STR_COMMA_LEN("00690070")) != 0) continue;
 
             // Respond with DHCP IP.
             char *pos = util_intToStr(&buffer[4096], dhcpClient.leasedIpNetmask);
@@ -326,7 +326,7 @@ static void modemClient_onFd(struct modemClient *self) {
         }
 
         // SMS notification.
-        if (lineLength >= 11 && hc_MEMCMP(&bufferLineStart[0], hc_STR_COMMA_LEN("+CMTI: \"SM\"")) == 0) {
+        if (lineLength >= 11 && mem_compare(&bufferLineStart[0], hc_STR_COMMA_LEN("+CMTI: \"SM\"")) == 0) {
             if (modemClient_queueConstant(self, hc_STR_COMMA_LEN(modemClient_SMS_POLL_CMD)) < 0) goto out_fail;
             continue;
         }

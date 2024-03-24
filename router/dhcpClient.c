@@ -142,7 +142,7 @@ static void dhcpClient_onFd(void) {
     struct dhcp_header *header = (void *)&buffer[0];
 
     // Make sure the packet is for us.
-    if (hc_MEMCMP(&header->clientHwAddr, &dhcpClient.ifreq.ifr_addr[2], 6) != 0) return;
+    if (mem_compare(&header->clientHwAddr, &dhcpClient.ifreq.ifr_addr[2], 6) != 0) return;
 
     // Find DHCP options.
     struct dhcp_option *messageType = NULL;
@@ -274,7 +274,7 @@ static void dhcpClient_onFd(void) {
 
             // Record new IP lease and renew-server.
             hc_MEMCPY(&dhcpClient.renewServerIp, &header->serverIp, 4);
-            if (hc_MEMCMP(&dhcpClient.leasedIp, &header->yourIp[0], 4) != 0) {
+            if (mem_compare(&dhcpClient.leasedIp, &header->yourIp[0], 4) != 0) {
                 hc_MEMCPY(&dhcpClient.leasedIp, &header->yourIp[0], 4);
 
                 char printBuffer[18];

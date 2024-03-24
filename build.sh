@@ -2,10 +2,9 @@
 set -e
 script_dir="$(cd -- "${0%/*}/" && pwd)"
 
-export OUT="$script_dir/hc-out/router-recipes"
-mkdir -p "$OUT"
 "$script_dir/recipes/bootloader"
 
-mkdir -p "$script_dir/out/efi/boot"
-cp "$OUT/bootloader/x86_64/bootloader.efi" "$script_dir/out/efi/boot/bootx64.efi"
-cp "$OUT/bootloader/x86_64/debug-bootloader.efi" "$script_dir/out/efi/boot/debug-bootx64.efi"
+rm -rf "$OUT/out"
+mkdir -p "$OUT/out/efi/boot"
+cp "$OUT/bootloader/x86_64-windows-gnu_bootloader.efi" "$OUT/out/efi/boot/bootx64.efi"
+cp "$OUT/bootloader/debug_x86_64-windows-gnu_bootloader.efi" "$OUT/out/efi/boot/debug_bootx64.efi"

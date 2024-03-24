@@ -3,19 +3,35 @@ set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
-pkg="musl-1.2.4"
-url="https://musl.libc.org/releases/$pkg.tar.gz"
+. "$SCRIPT_DIR/files/urls"
 sha512="498ec5d7941194a8806f4d42f0f6d218c862996ef1398b737d0d06995e0b7a6574b240a48088f6b84016b14b2776fe463f829dcb11149cdfc1023d496b235c55"
 
-DEPENDENCIES="../hc/bootstrap/make"
-
 recipe_start
-export PATH="$OUT/make/bin:$PATH"
-gzip -d -c "$(recipe_download "$url" "$sha512")" | tar xf -
-cd "./$pkg"
+gzip -d -c "$(recipe_download "$url_musl" "$sha512")" | tar xf -
+cd ./musl-1.2.4
 
 arch=x86_64
-make -j "$NUM_CPUS" install-headers ARCH=$arch prefix= DESTDIR="$OUT/$SCRIPT_NAME/$arch"
+destdir="$OUT/$SCRIPT_NAME/$arch"
+
+install_headers() {
+    find $1 -type f -name "*.h" ! -exec /bin/sh -ec 'dest="$1/$2"; mkdir -p "${dest%/*}/"; cp "$2" "$dest"' sh "$destdir/include" {} \; -print
+}
+
+# Do the equivalent of `make install-headers ARCH="$arch" prefix= DESTDIR="$destdir"` without depending on GNU make.
+# INCLUDES
+fails="$(cd include && install_headers .)"
+test -z "$fails"
+# GENH
+mkdir -p "$destdir/include/bits"
+sed -f ./tools/mkalltypes.sed "./arch/$arch/bits/alltypes.h.in" ./include/alltypes.h.in > "$destdir/include/bits/alltypes.h"
+cp "./arch/$arch/bits/syscall.h.in" "$destdir/include/bits/syscall.h"
+sed -n -e s/__NR_/SYS_/p < "./arch/$arch/bits/syscall.h.in" >> "$destdir/include/bits/syscall.h"
+# GENERIC_INCLUDES
+fails="$(cd arch/generic && install_headers bits)"
+test -z "$fails"
+# ARCH_INCLUDES
+fails="$(cd "arch/$arch" && install_headers bits)"
+test -z "$fails"
 
 rm -rf "$PWD"
 recipe_finish

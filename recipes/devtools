@@ -1,0 +1,50 @@
+#!/bin/sh --
+set -ex
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+
+. "$SCRIPT_DIR/files/urls"
+
+DEPENDENCIES="host_llvm llvm linux-headers musl"
+
+recipe_start
+mkdir out
+cd out
+
+mkdir bin
+cp "$OUT/llvm/bin/clang-16" bin/clang
+cp "$OUT/llvm/bin/lld" bin/ld
+cp "$OUT/llvm/bin/llvm-ar" bin/ar
+
+cat > bin/cc <<"end"
+#!/bin/sh --
+case "$0" in
+    */*)
+    script_dir="${0%/*}"
+    ;;
+    *)
+    IFS=:
+    for script_dir in $PATH; do
+        test -f "$script_dir/$0" && break
+    done
+    unset IFS
+    ;;
+esac
+sysroot="$(cd -- "$script_dir/.." && pwd)"
+end
+chmod +x bin/cc # TODO
+cp bin/cc bin/c++
+cp bin/cc bin/cpp
+cp bin/cc bin/ldd
+echo 'exec "$sysroot/bin/clang" -Wno-unused-command-line-argument -Wl,-dynamic-linker="$sysroot/lib/libc.so" "$@"' >> bin/cc
+echo 'exec "$sysroot/bin/clang" --driver-mode=g++ -Wno-unused-command-line-argument -Wl,-dynamic-linker="$sysroot/lib/libc.so" "$@"' >> bin/c++
+echo 'exec "$sysroot/bin/clang" --driver-mode=cpp "$@"' >> bin/cpp
+echo 'exec "$sysroot/lib/libc.so" --list "$@"' >> bin/ldd
+
+cp -r "$OUT/llvm/include" .
+cp -r "$OUT/llvm/lib" .
+cp -r "$OUT/host_llvm/lib" .
+cp -r "$OUT/linux-headers/x86_64/"* .
+cp -r "$OUT/musl/x86_64/"* .
+rm lib/ld-musl-x86_64.so.1
+recipe_finish

@@ -3,21 +3,20 @@ set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
-pkg="busybox-1.36.1"
-url="https://busybox.net/downloads/$pkg.tar.bz2"
+. "$SCRIPT_DIR/files/urls"
 sha512="8c0c754c9ae04b5e6b23596283a7d3a4ef96225fe179f92d6f6a99c69c0caa95b1aa56c267f52d7c807f6cc69e1f0b7dd29a8ac624098f601738f8c0c57980d4"
 
-DEPENDENCIES="../hc/bootstrap/make host_bzip2"
+DEPENDENCIES="make host_bzip2"
 DIR_DEPENDENCIES="files/host_busybox"
 
 recipe_start
 export PATH="$OUT/make/bin:$OUT/host_bzip2/bin:$PATH"
-bzip2 -d -c "$(recipe_download "$url" "$sha512")" | tar xf -
-cd "./$pkg"
+bzip2 -d -c "$(recipe_download "$url_busybox" "$sha512")" | tar xf -
+cd ./busybox-1.36.1
 
 cp "$SCRIPT_DIR/files/host_busybox/.config" .
-make -j "$NUM_CPUS" HOSTCC="$CC" CC="$CC"
-make -j "$NUM_CPUS" install HOSTCC="$CC" CC="$CC"
+make -j "$NUM_CPUS" oldconfig HOSTCC="$CC" CC="$CC"
+make -j "$NUM_CPUS" install HOSTCC="$CC" CC="$CC" SKIP_STRIP=y CONFIG_PREFIX="$OUT/$SCRIPT_NAME"
 
 rm -rf "$PWD"
 recipe_finish

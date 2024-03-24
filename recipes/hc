@@ -1,0 +1,12 @@
+#!/bin/sh --
+set -ex
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+
+DEPENDENCIES="host_llvm"
+DIR_DEPENDENCIES="../hc"
+
+recipe_start
+export LLVM="$OUT/host_llvm"
+OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/tar/build.sh"
+recipe_finish

@@ -1,0 +1,13 @@
+#!/bin/sh --
+set -ex
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+
+DEPENDENCIES="hc"
+DIR_DEPENDENCIES=".."
+
+recipe_start
+cd "$SCRIPT_DIR/.."
+"$OUT/hc/tar" "$OUT/$SCRIPT_NAME/source.tar" .
+touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/source.tar"
+recipe_finish

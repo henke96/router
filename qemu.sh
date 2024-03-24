@@ -3,6 +3,9 @@
 set -e
 script_dir="$(cd -- "${0%/*}/" && pwd)"
 
+test -n "$OUT" || { echo "Please set OUT"; exit 1; }
+NUM_CPUS="${NUM_CPUS:-1}"
+
 cleanup() {
     set +e
     ip link del qemu1
@@ -21,16 +24,11 @@ add_nic() {
     qemu_args="$qemu_args -netdev tap,id=net$1,ifname=qemu$1,script=no,downscript=no -device e1000,netdev=net$1"
 }
 
-if test ! -f "$script_dir/disk.img"; then
-    dd if=/dev/zero of="$script_dir/disk.img" bs=1048576 count=16
-fi
-
 trap cleanup EXIT
 trap "" INT # Make sure cleanup gets run on Ctrl-C.
 
 # NIC 1, optionally a macvtap.
-if test -n "$1"
-then
+if test -n "$1"; then
     ip link add link $1 name qemu1 type macvtap
     qemu_args="-netdev tap,fd=3,id=net1 -device e1000,netdev=net1,mac=$(cat /sys/class/net/qemu1/address) 3<>/dev/tap$(cat /sys/class/net/qemu1/ifindex)"
 else
@@ -47,8 +45,23 @@ add_nic 6
 add_nic 7
 add_nic 8
 
+dd if=/dev/zero of="$OUT/disk1.img" bs=1048576 count=1000
+mformat -i "$OUT/disk1.img" -F -N 0 -v DISK1 ::
+mcopy -i "$OUT/disk1.img" -s "$OUT/out/efi" ::/
+if test -d "$OUT/devtools"; then
+    mcopy -i "$OUT/disk1.img" -s "$OUT/devtools/out" ::/ | :
+fi
+if test -d "$OUT/downloads"; then
+    mcopy -i "$OUT/disk1.img" -s "$OUT/downloads/out" ::/
+fi
+
+test -f "$OUT/disk2.img" || dd if=/dev/zero of="$OUT/disk2.img" bs=1048576 count=10000
+
 qemu-system-x86_64 \
 -bios /usr/share/qemu/OVMF.fd \
--m 256M \
--drive format=raw,file=fat:rw:"$script_dir/out" \
+-cpu host \
+-smp "$NUM_CPUS" \
+-m "${NUM_CPUS}G" \
+-drive format=raw,file=$OUT/disk1.img \
+-drive format=raw,file=$OUT/disk2.img \
 -enable-kvm $qemu_args

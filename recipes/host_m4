@@ -3,16 +3,15 @@ set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
-pkg="m4-1.4.19"
-url="https://ftp.gnu.org/gnu/m4/$pkg.tar.xz"
+. "$SCRIPT_DIR/files/urls"
 sha512="47f595845c89709727bda0b3fc78e3188ef78ec818965b395532e7041cabe9e49677ee4aca3d042930095a7f8df81de3da1026b23b6897be471f6cf13ddd512b"
 
-DEPENDENCIES="../hc/bootstrap/make ../hc/bootstrap/xz"
+DEPENDENCIES="make xz"
 
 recipe_start
 export PATH="$OUT/make/bin:$OUT/xz/bin:$PATH"
-xz -d -c "$(recipe_download "$url" "$sha512")" | tar xf -
-cd "./$pkg"
+xz -d -c "$(recipe_download "$url_m4" "$sha512")" | tar xf -
+cd ./m4-1.4.19
 
 ./configure --prefix="$OUT/$SCRIPT_NAME" --disable-dependency-tracking --disable-nls --without-libiconv-prefix --without-libintl-prefix --without-dmalloc --without-libsigsegv-prefix
 make -j "$NUM_CPUS" install

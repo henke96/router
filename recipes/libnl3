@@ -3,20 +3,19 @@ set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
-pkg="libnl-3.8.0"
-url="https://github.com/thom311/libnl/releases/download/libnl3_8_0/$pkg.tar.gz"
+. "$SCRIPT_DIR/files/urls"
 sha512="a8da7e8464c5cab2807cd86f83fca53bc77f7c3bdefe43880db7be9caf5ba6bfca1b7e778b906c12fda1cf7e6f413f88cc7ad1dcc42fe8c050a8d28a6e656c02"
 
-DEPENDENCIES="../hc/bootstrap/make host_llvm host_bison host_flex musl linux-headers"
+DEPENDENCIES="make host_llvm host_bison host_flex musl linux-headers"
 
 recipe_start
 export PATH="$OUT/make/bin:$OUT/host_llvm/bin:$OUT/host_bison/bin:$OUT/host_flex/bin:$PATH"
-gzip -d -c "$(recipe_download "$url" "$sha512")" | tar xf -
-cd "./$pkg"
+gzip -d -c "$(recipe_download "$url_libnl3" "$sha512")" | tar xf -
+cd ./libnl-3.8.0
 
 arch=x86_64
 export CC=clang AR=llvm-ar RANLIB=llvm-ranlib
-export CFLAGS="-target $arch-unknown-linux-musl --sysroot $OUT/musl/$arch -I$OUT/linux-headers/$arch"
+export CFLAGS="-target $arch-unknown-linux-musl --sysroot $OUT/musl/$arch -I$OUT/linux-headers/$arch/include"
 ./configure --prefix= --host=$arch --disable-dependency-tracking --disable-debug --enable-shared=no
 make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME"
 

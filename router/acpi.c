@@ -14,7 +14,7 @@ static void acpi_init(void) {
         struct nlattr *groupAttr = netlink_findAttr(&groupsAttr[1], (void *)groupsAttr + groupsAttr->nla_len, groupNum);
         struct nlattr *groupNameAttr = netlink_findAttr(&groupAttr[1], (void *)groupAttr + groupAttr->nla_len, CTRL_ATTR_MCAST_GRP_NAME);
 
-        if (hc_MEMCMP(&groupNameAttr[1], ACPI_EVENT_MCAST_GROUP_NAME, sizeof(ACPI_EVENT_MCAST_GROUP_NAME)) == 0) {
+        if (mem_compare(&groupNameAttr[1], ACPI_EVENT_MCAST_GROUP_NAME, sizeof(ACPI_EVENT_MCAST_GROUP_NAME)) == 0) {
             struct nlattr *groupIdAttr = netlink_findAttr(&groupAttr[1], (void *)groupAttr + groupAttr->nla_len, CTRL_ATTR_MCAST_GRP_ID);
             acpi.mcastGrpId = *(uint16_t *)&groupIdAttr[1];
             break;
