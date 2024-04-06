@@ -5,12 +5,9 @@ SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 
 . "$SCRIPT_DIR/files/urls"
 
-DEPENDENCIES="host_llvm llvm linux-headers musl"
+DEPENDENCIES="hc llvm linux-headers musl"
 
 recipe_start
-mkdir out
-cd out
-
 mkdir bin
 cp "$OUT/llvm/bin/clang-16" bin/clang
 cp "$OUT/llvm/bin/lld" bin/ld
@@ -32,7 +29,6 @@ case "$0" in
 esac
 sysroot="$(cd -- "$script_dir/.." && pwd)"
 end
-chmod +x bin/cc # TODO
 cp bin/cc bin/c++
 cp bin/cc bin/cpp
 cp bin/cc bin/ldd
@@ -41,10 +37,25 @@ echo 'exec "$sysroot/bin/clang" --driver-mode=g++ -Wno-unused-command-line-argum
 echo 'exec "$sysroot/bin/clang" --driver-mode=cpp "$@"' >> bin/cpp
 echo 'exec "$sysroot/lib/libc.so" --list "$@"' >> bin/ldd
 
-cp -r "$OUT/llvm/include" .
-cp -r "$OUT/llvm/lib" .
-cp -r "$OUT/host_llvm/lib" .
-cp -r "$OUT/linux-headers/x86_64/"* .
-cp -r "$OUT/musl/x86_64/"* .
-rm lib/ld-musl-x86_64.so.1
+"$OUT/hc/tar" \
+-o router.tar \
+-p router \
+-r "$SCRIPT_DIR/.." \
+-a . \
+-o devtools.tar \
+-p devtools \
+-r . \
+-a bin \
+-r "$OUT/llvm" \
+-a include \
+-a lib \
+-r "$OUT/host_llvm" \
+-a lib \
+-r "$OUT/linux-headers/x86_64" \
+-a include \
+-r "$OUT/musl/x86_64" \
+-a include \
+-a lib
+
+rm -rf ./bin
 recipe_finish

@@ -64,4 +64,3 @@ slink /bin/xargs /bin/busybox 0755 0 0
 
 file /init ../../init/${DEBUG_PREFIX}${ARCH}-linux_init 0755 0 0
 file /router ../../router/${DEBUG_PREFIX}${ARCH}-linux_router 0755 0 0
-file /source.tar ../../source/source.tar 0755 0 0

@@ -23,11 +23,12 @@ cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
 -DLLVM_ENABLE_PROJECTS="clang;lld" \
 -DLLVM_TARGETS_TO_BUILD="AArch64;RISCV;X86" \
 -DLLVM_DEFAULT_TARGET_TRIPLE="x86_64-unknown-linux-musl" \
--DDEFAULT_SYSROOT="/path/that/doesnt/exist" -DCLANG_DEFAULT_LINKER="lld" -DCLANG_DEFAULT_RTLIB="compiler-rt" -DCLANG_DEFAULT_CXX_STDLIB="libc++" \
+-DDEFAULT_SYSROOT="/path/that/doesnt/exist" -DCLANG_DEFAULT_LINKER="lld" -DCLANG_DEFAULT_RTLIB="compiler-rt" -DCLANG_DEFAULT_CXX_STDLIB="libc++" -DCLANG_DEFAULT_PIE_ON_LINUX=OFF \
 -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
 -DLLVM_BUILTIN_TARGETS="x86_64-unknown-linux-musl" \
 -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-musl" \
 -DBUILTINS_x86_64-unknown-linux-musl_CMAKE_SYSROOT="$OUT/musl-headers/x86_64" \
+-DBUILTINS_x86_64-unknown-linux-musl_CMAKE_C_FLAGS="-ffile-prefix-map=$PWD=." \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_BUILD_GWP_ASAN=OFF \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_BUILD_ORC=OFF \
