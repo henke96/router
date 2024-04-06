@@ -16,6 +16,7 @@ cd ./musl-1.2.4
 arch=x86_64
 export CC=clang AR=llvm-ar RANLIB=llvm-ranlib
 export CFLAGS="-target $arch-unknown-linux-musl"
+export LDFLAGS="-Wl,--hash-style=gnu,-znow,-znorelro" # Override clang distro detection based flags.
 export LIBCC="$("$CC" $CFLAGS --print-libgcc-file-name)"
 ./configure --prefix= --target=$arch
 make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME/$arch"
