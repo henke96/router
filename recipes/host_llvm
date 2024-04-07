@@ -13,6 +13,10 @@ export PATH="$OUT/make/bin:$OUT/xz/bin:$OUT/python/bin:$OUT/cmake/bin:$PATH"
 xz -d -c "$(recipe_download "$url_llvm" "$sha512")" | tar xf -
 cd ./llvm-project-16.0.6.src
 
+# Make llvm-tblgen output reproducible.
+sed -e 's/llvm::sort(SuperRegClasses/llvm::stable_sort(SuperRegClasses/' ./llvm/utils/TableGen/CodeGenRegisters.cpp > ./sed.temp
+mv ./sed.temp ./llvm/utils/TableGen/CodeGenRegisters.cpp
+
 cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
 -DCMAKE_MAKE_PROGRAM=make -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
 -DCMAKE_INSTALL_PREFIX="$OUT/$SCRIPT_NAME" \
