@@ -6,10 +6,10 @@ SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/files/urls"
 sha512="d4d23af6671406e97257892f90651b67f2ab95219831372be032190b7156c10a3435d457857e677445df8b2327aacccc15344acbbc3808a6f332a93cce23b444"
 
-DEPENDENCIES="make xz host_m4"
+DEPENDENCIES="make xz m4"
 
 recipe_start
-export PATH="$OUT/make/bin:$OUT/xz/bin:$OUT/host_m4/bin:$PATH"
+export PATH="$OUT/make/bin:$OUT/xz/bin:$OUT/m4/bin:$PATH"
 xz -d -c "$(recipe_download "$url_bison" "$sha512")" | tar xf -
 cd ./bison-3.8.2
 

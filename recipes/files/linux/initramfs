@@ -11,56 +11,15 @@ dir /lib/firmware 0755 0 0
 file /lib/firmware/iwlwifi-cc-a0-77.ucode ../../linux-firmware/bin/iwlwifi-cc-a0-77.ucode 0755 0 0
 file /lib/firmware/regulatory.db ../../wireless-regdb/bin/regulatory.db 0755 0 0
 
-dir /bin 0755 0 0
-file /bin/hostapd ../../hostapd/hostapd 0755 0 0
-file /bin/busybox ../../busybox/bin/busybox 0755 0 0
-slink /bin/awk /bin/busybox 0755 0 0
-slink /bin/basename /bin/busybox 0755 0 0
-slink /bin/cat /bin/busybox 0755 0 0
-slink /bin/cut /bin/busybox 0755 0 0
-slink /bin/cmp /bin/busybox 0755 0 0
-slink /bin/chmod /bin/busybox 0755 0 0
-slink /bin/comm /bin/busybox 0755 0 0
-slink /bin/cp /bin/busybox 0755 0 0
-slink /bin/date /bin/busybox 0755 0 0
-slink /bin/dd /bin/busybox 0755 0 0
-slink /bin/diff /bin/busybox 0755 0 0
-slink /bin/dirname /bin/busybox 0755 0 0
-slink /bin/echo /bin/busybox 0755 0 0
-slink /bin/env /bin/busybox 0755 0 0
-slink /bin/expr /bin/busybox 0755 0 0
-slink /bin/find /bin/busybox 0755 0 0
-slink /bin/grep /bin/busybox 0755 0 0
-slink /bin/gzip /bin/busybox 0755 0 0
-slink /bin/head /bin/busybox 0755 0 0
-slink /bin/install /bin/busybox 0755 0 0
-slink /bin/ln /bin/busybox 0755 0 0
-slink /bin/ls /bin/busybox 0755 0 0
-slink /bin/mount /bin/busybox 0755 0 0
-slink /bin/mkdir /bin/busybox 0755 0 0
-slink /bin/mkfs.ext2 /bin/busybox 0755 0 0
-slink /bin/mkfs.vfat /bin/busybox 0755 0 0
-slink /bin/mktemp /bin/busybox 0755 0 0
-slink /bin/mv /bin/busybox 0755 0 0
-slink /bin/od /bin/busybox 0755 0 0
-slink /bin/rm /bin/busybox 0755 0 0
-slink /bin/rmdir /bin/busybox 0755 0 0
-slink /bin/sed /bin/busybox 0755 0 0
-slink /bin/sh /bin/busybox 0755 0 0
-slink /bin/sha512sum /bin/busybox 0755 0 0
-slink /bin/sort /bin/busybox 0755 0 0
-slink /bin/tail /bin/busybox 0755 0 0
-slink /bin/tar /bin/busybox 0755 0 0
-slink /bin/touch /bin/busybox 0755 0 0
-slink /bin/tune2fs /bin/busybox 0755 0 0
-slink /bin/tr /bin/busybox 0755 0 0
-slink /bin/true /bin/busybox 0755 0 0
-slink /bin/uname /bin/busybox 0755 0 0
-slink /bin/uniq /bin/busybox 0755 0 0
-slink /bin/umount /bin/busybox 0755 0 0
-slink /bin/vi /bin/busybox 0755 0 0
-slink /bin/wc /bin/busybox 0755 0 0
-slink /bin/xargs /bin/busybox 0755 0 0
-
 file /init ../../init/${DEBUG_PREFIX}${ARCH}-linux_init 0755 0 0
 file /router ../../router/${DEBUG_PREFIX}${ARCH}-linux_router 0755 0 0
+file /hostapd ../../hostapd_${ARCH}/hostapd 0755 0 0
+
+file /mount ../../utilities/${DEBUG_PREFIX}${ARCH}-linux_mount 0755 0 0
+file /bash ../../bash_${ARCH}/bin/bash 0755 0 0
+file /tar ../../tar_${ARCH}/bin/tar 0755 0 0
+
+slink /usr / 0755 0 0
+dir /bin 0755 0 0
+file /bin/env ../../utilities/${DEBUG_PREFIX}${ARCH}-linux_env 0755 0 0
+file /bin/sh ../../utilities/sh 0755 0 0

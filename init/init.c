@@ -35,8 +35,8 @@ static int32_t initialise(void) {
 }
 
 static noreturn void busybox(hc_UNUSED void *arg) {
-    const char *newArgv[] = { "/bin/sh", NULL };
-    const char *newEnvp[] = { "PATH=/bin", NULL };
+    const char *newArgv[] = { "/bash", NULL };
+    const char *newEnvp[] = { NULL };
     sys_execveat(-1, newArgv[0], &newArgv[0], &newEnvp[0], 0);
     sys_exit_group(1);
 }

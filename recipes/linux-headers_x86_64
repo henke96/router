@@ -16,7 +16,7 @@ cd ./linux-6.6
 export ARCH=x86_64
 make -j "$NUM_CPUS" headers HOSTCC="$CC"
 cd ./usr
-fails="$(find include -type f -name "*.h" ! -exec /bin/sh -ec 'dest="$1/$2"; mkdir -p "${dest%/*}/"; cp "$2" "$dest"' sh "$OUT/$SCRIPT_NAME/$ARCH" {} \; -print)"
+fails="$(find include -type f -name "*.h" ! -exec sh -ec 'dest="$1/$2"; mkdir -p "${dest%/*}/"; cp "$2" "$dest"' sh "$OUT/$SCRIPT_NAME" {} \; -print)"
 test -z "$fails"
 cd ..
 

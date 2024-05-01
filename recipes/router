@@ -7,12 +7,13 @@ DEPENDENCIES="hc"
 DIR_DEPENDENCIES="../router"
 
 recipe_start
-export LLVM="$OUT/host_llvm"
+export LLVM="$OUT/llvm"
 export ARCH=x86_64
 export ABI=linux
-export FLAGS="-Os -s"
+export FLAGS="-Os"
 export FLAGS_RELEASE= FLAGS_DEBUG=
 OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../router/router.c"
+"$SCRIPT_DIR/../hc/objcopy.sh" --strip-sections "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_router"
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_router"
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug_$ARCH-${ABI}_router"
 recipe_finish

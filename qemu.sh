@@ -47,14 +47,7 @@ add_nic 8
 
 dd if=/dev/zero of="$OUT/disk1.img" bs=1048576 count=1000
 mformat -i "$OUT/disk1.img" -F -N 0 -v DISK1 ::
-mcopy -i "$OUT/disk1.img" -s "$OUT/out/efi" ::/
-if test -d "$OUT/devtools"; then
-    mcopy -i "$OUT/disk1.img" -s "$OUT/devtools/router.tar" ::/
-    mcopy -i "$OUT/disk1.img" -s "$OUT/devtools/devtools.tar" ::/
-fi
-if test -d "$OUT/downloads"; then
-    mcopy -i "$OUT/disk1.img" -s "$OUT/downloads/out" ::/
-fi
+mcopy -i "$OUT/disk1.img" -s "$OUT/out/"* ::/
 
 test -f "$OUT/disk2.img" || dd if=/dev/zero of="$OUT/disk2.img" bs=1048576 count=10000
 

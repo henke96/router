@@ -6,10 +6,10 @@ SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/files/urls"
 sha512="e9785f3d620a204b7d20222888917dc065c2036cae28667065bf7862dfa1b25235095a12fd04efdbd09bfd17d3452e6b9ef953a8c1137862ff671c97132a082e"
 
-DEPENDENCIES="make host_m4"
+DEPENDENCIES="make m4"
 
 recipe_start
-export PATH="$OUT/make/bin:$OUT/host_m4/bin:$PATH"
+export PATH="$OUT/make/bin:$OUT/m4/bin:$PATH"
 gzip -d -c "$(recipe_download "$url_flex" "$sha512")" | tar xf -
 cd ./flex-2.6.4
 

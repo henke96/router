@@ -3,10 +3,13 @@ set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
-DEPENDENCIES="llvm"
-DIR_DEPENDENCIES="../hc"
+DEPENDENCIES="hc"
+DIR_DEPENDENCIES=".."
 
 recipe_start
-export LLVM="$OUT/llvm"
-OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/tar/build.sh"
+"$OUT/hc/tar" \
+-o source.tar \
+-p source \
+-r "$SCRIPT_DIR/.." \
+-a .
 recipe_finish

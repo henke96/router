@@ -1,0 +1,32 @@
+#!/bin/sh --
+set -ex
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+
+. "$SCRIPT_DIR/files/urls"
+sha512="e3d4d4aa4b2e53fdad980620307257c91dfbbc40bcec9baa8d4e85e8327f55e2ece552c9baf209df7b66a07103ab92d4954ac53c86c57fbde5e1dd461143f94c"
+
+DEPENDENCIES="make xz llvm musl_x86_64"
+
+recipe_start
+export PATH="$OUT/make/bin:$OUT/xz/bin:$OUT/llvm/bin:$PATH"
+xz -d -c "$(recipe_download "$url_gzip" "$sha512")" | tar xf -
+cd ./gzip-1.13
+
+arch=x86_64
+export CC=clang AR=llvm-ar
+export CFLAGS="-target $arch-unknown-linux-musl --sysroot $OUT/musl_$arch -Os -ffunction-sections -fno-asynchronous-unwind-tables"
+export LDFLAGS="-static -Wl,--gc-sections"
+# https://savannah.gnu.org/support/?110846
+sed -e 's/cross_compiling=maybe/cross_compiling=yes/' ./configure > ./sed.temp
+mv ./sed.temp ./configure
+chmod +x ./configure
+# Set `ac_cv_path_shell` to avoid bash shebangs in installed scripts..
+./configure ac_cv_path_shell=/bin/sh --prefix= --host=$arch-unknown-linux-musl --disable-dependency-tracking
+
+make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME"
+llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/gzip"
+touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/bin/gzip"
+
+rm -rf "$PWD"
+recipe_finish

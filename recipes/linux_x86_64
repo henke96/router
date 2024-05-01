@@ -6,16 +6,16 @@ SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/files/urls"
 sha512="458b2c34d46206f9b4ccbac54cc57aeca1eaecaf831bc441e59701bac6eadffc17f6ce24af6eadd0454964e843186539ac0d63295ad2cc32d112b60360c39a35"
 
-DEPENDENCIES="make xz host_llvm host_busybox host_flex host_bison host_elfutils host_perl linux-firmware wireless-regdb init router hostapd busybox"
+DEPENDENCIES="make xz llvm bc flex bison elfutils perl linux-firmware wireless-regdb init router utilities hostapd_x86_64 bash_x86_64 tar_x86_64"
 DIR_DEPENDENCIES="files/linux"
 
 recipe_start
-export PATH="$OUT/make/bin:$OUT/xz/bin:$OUT/host_llvm/bin:$OUT/host_busybox/bin:$OUT/host_flex/bin:$OUT/host_bison/bin:$OUT/host_elfutils/bin:$OUT/host_perl/bin:$PATH"
+export PATH="$OUT/make/bin:$OUT/xz/bin:$OUT/llvm/bin:$OUT/bc/bin:$OUT/flex/bin:$OUT/bison/bin:$OUT/perl/bin:$PATH"
 xz -d -c "$(recipe_download "$url_linux" "$sha512")" | tar xf -
 cd ./linux-6.6
 
 export KBUILD_BUILD_TIMESTAMP="1970-01-01" KBUILD_BUILD_USER="@" KBUILD_BUILD_HOST="@" ARCH=x86_64
-export HOSTCFLAGS="-I$OUT/host_elfutils/include" HOSTLDFLAGS="-Wl,-rpath,$OUT/host_elfutils/lib -L$OUT/host_elfutils/lib"
+export HOSTCFLAGS="-I$OUT/elfutils/include" HOSTLDFLAGS="-Wl,-rpath,$OUT/elfutils/lib -L$OUT/elfutils/lib"
 llvm_tools="CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump READELF=llvm-readelf"
 cp "$SCRIPT_DIR/files/linux/.config" .
 
