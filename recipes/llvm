@@ -13,9 +13,15 @@ export PATH="$OUT/make/bin:$OUT/xz/bin:$OUT/python/bin:$OUT/cmake/bin:$PATH"
 xz -d -c "$(recipe_download "$url_llvm" "$sha512")" | tar xf -
 cd ./llvm-project-16.0.6.src
 
-# Make llvm-tblgen output reproducible.
+# Make llvm-tblgen output more deterministic.
 sed -e 's/llvm::sort(SuperRegClasses/llvm::stable_sort(SuperRegClasses/' ./llvm/utils/TableGen/CodeGenRegisters.cpp > ./sed.temp
 mv ./sed.temp ./llvm/utils/TableGen/CodeGenRegisters.cpp
+sed -e 's/llvm::sort(OpcodeMappings/llvm::stable_sort(OpcodeMappings/' ./llvm/utils/TableGen/CodeGenSchedule.cpp > ./sed.temp
+mv ./sed.temp ./llvm/utils/TableGen/CodeGenSchedule.cpp
+
+# Make the SROA optimisation pass more deterministic.
+sed -e 's/llvm::sort(AS);/llvm::stable_sort(AS);/' ./llvm/lib/Transforms/Scalar/SROA.cpp > sed.temp
+mv ./sed.temp ./llvm/lib/Transforms/Scalar/SROA.cpp
 
 cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
 -DCMAKE_MAKE_PROGRAM=make -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
@@ -31,8 +37,12 @@ cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
 -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
 -DLLVM_BUILTIN_TARGETS="x86_64-unknown-linux-musl" \
 -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-musl" \
+-DBUILTINS_x86_64-unknown-linux-musl_CMAKE_SYSTEM_NAME=Linux \
+-DBUILTINS_x86_64-unknown-linux-musl_CMAKE_FIND_USE_CMAKE_SYSTEM_PATH=NO \
 -DBUILTINS_x86_64-unknown-linux-musl_CMAKE_SYSROOT="$OUT/musl-headers_x86_64" \
 -DBUILTINS_x86_64-unknown-linux-musl_CMAKE_C_FLAGS="-ffile-prefix-map=$PWD=." \
+-DRUNTIMES_x86_64-unknown-linux-musl_CMAKE_SYSTEM_NAME=Linux \
+-DRUNTIMES_x86_64-unknown-linux-musl_CMAKE_FIND_USE_CMAKE_SYSTEM_PATH=NO \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_BUILD_GWP_ASAN=OFF \
 -DRUNTIMES_x86_64-unknown-linux-musl_COMPILER_RT_BUILD_ORC=OFF \
