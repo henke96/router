@@ -174,6 +174,7 @@ static void dhcpClient_onFd(void) {
                 if (current->length == 4) leaseTime = current;
                 break;
             }
+            default: break;
         }
         current = next;
     }
@@ -355,7 +356,9 @@ static void dhcpClient_onFd(void) {
                 struct iovec_const iov[] = { { &request, sizeof(request) } };
                 netlink_talk(config.rtnetlinkFd, &iov[0], hc_ARRAY_LEN(iov));
             }
+            break;
         }
+        default: break;
     }
 }
 

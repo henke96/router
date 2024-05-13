@@ -10,7 +10,7 @@ recipe_start
 export LLVM="$OUT/llvm"
 export ARCH=x86_64
 export ABI=windows-gnu
-export FLAGS="-Wl,-subsystem,efi_application -Os -s -I $OUT/linux_$ARCH"
+export FLAGS="-Werror -Wl,-subsystem,efi_application -Os -s -I $OUT/linux_$ARCH"
 export FLAGS_RELEASE= FLAGS_DEBUG=
 OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../bootloader/bootloader.efi.c"
 recipe_finish

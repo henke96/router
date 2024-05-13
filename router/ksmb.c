@@ -190,6 +190,7 @@ static void ksmb_onNetlinkFd(void) {
             netlink_talk(ksmb.netlinkFd, &iov[0], hc_ARRAY_LEN(iov));
             break;
         }
+        default: break;
     }
 }
 

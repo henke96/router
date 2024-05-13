@@ -10,7 +10,7 @@ recipe_start
 export LLVM="$OUT/llvm"
 export ARCH=x86_64
 export ABI=linux
-export FLAGS="-Os"
+export FLAGS="-Werror -Os"
 export FLAGS_RELEASE= FLAGS_DEBUG=
 
 OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../utilities/env.c"

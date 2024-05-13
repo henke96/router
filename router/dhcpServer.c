@@ -90,6 +90,7 @@ static void dhcpServer_onFd(struct dhcpServer *self) {
                 if (current->length == 1) messageType = current;
                 break;
             }
+            default: break;
         }
         current = next;
     }
