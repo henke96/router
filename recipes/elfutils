@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/files/urls"
 sha512="93a877e34db93e5498581d0ab2d702b08c0d87e4cafd9cec9d6636dfa85a168095c305c11583a5b0fb79374dd93bc8d0e9ce6016e6c172764bcea12861605b71"
 
-DEPENDENCIES="make bzip2 m4"
+DEPENDENCIES="make bzip2 m4 zlib"
 DIR_DEPENDENCIES="files/elfutils"
 
 recipe_start
@@ -18,15 +18,8 @@ cd ./elfutils-0.189
 "$CC" -shared -o ./libfts.so "$SCRIPT_DIR/files/elfutils/dummylib.c"
 cp ./libfts.so ./libargp.so
 cp ./libfts.so ./libobstack.so
-cp ./libfts.so ./libz.so
 
-# Remove libz dependency.
-sed -e 's/elf_compress.c elf_compress_gnu.c//; s/elf_compress.$(OBJEXT)//; s/elf_compress_gnu.$(OBJEXT)//; s/ -lz//' ./libelf/Makefile.in > ./sed.temp
-mv ./sed.temp ./libelf/Makefile.in
-sed -e 's/__libelf_decompress_elf (strscn, &zsize, &zalign)/NULL/' ./libelf/elf_strptr.c > ./sed.temp
-mv ./sed.temp ./libelf/elf_strptr.c
-
-./configure --prefix="$OUT/$SCRIPT_NAME" --disable-dependency-tracking --disable-demangler --disable-nls --without-valgrind --without-bzlib --without-lzma --without-zstd --without-libiconv-prefix --without-libintl-prefix --disable-debuginfod --disable-libdebuginfod --disable-symbol-versioning CFLAGS="-Wno-error" LDFLAGS="-L$PWD"
+./configure --prefix="$OUT/$SCRIPT_NAME" --disable-dependency-tracking --disable-demangler --disable-nls --without-valgrind --without-bzlib --without-lzma --without-zstd --without-libiconv-prefix --without-libintl-prefix --disable-debuginfod --disable-libdebuginfod --disable-symbol-versioning CFLAGS="-Wno-error -I$OUT/zlib/include" LDFLAGS="-L$PWD -L$OUT/zlib/lib -Wl,-rpath,$OUT/zlib/lib"
 
 cp "$SCRIPT_DIR/files/elfutils/libintl.h" ./libelf/
 ar r ./lib/libeu.a

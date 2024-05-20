@@ -14,7 +14,7 @@ cp "$OUT/llvm_x86_64/bin/lld" bin/ld
 cp "$OUT/llvm_x86_64/bin/llvm-ar" bin/ar
 cp "$OUT/coreutils_x86_64/bin/coreutils" bin/
 cp "$OUT/bash_x86_64/bin/bash" bin/sh
-cp "$OUT/gzip_x86_64/bin/gzip" bin/
+cp "$OUT/gzip_x86_64/gzip" bin/
 cp "$OUT/tar_x86_64/bin/tar" bin/
 cp "$OUT/sed_x86_64/bin/sed" bin/
 cp "$OUT/diffutils_x86_64/bin/diff" bin/
