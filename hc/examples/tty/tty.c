@@ -6,9 +6,17 @@
 #include "hc/linux/sys.c"
 #include "hc/linux/debug.c"
 #include "hc/linux/util.c"
-#include "hc/linux/drmKms.c"
 #include "hc/linux/helpers/_start.c"
 #include "hc/linux/helpers/sys_clone3_exit.c"
+#include "hc/ix/drm.h"
+
+#define ix_ERRNO(RET) (-RET)
+#define openat sys_openat
+#define mmap sys_mmap
+#define ioctl sys_ioctl
+#define read sys_read
+#define close sys_close
+#include "hc/ix/drm.c"
 
 #include "graphics.c"
 
@@ -23,7 +31,7 @@ int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
     if (argc == 2) {
         // Parse TTY_NUM argument.
         if (util_strToUint(argv[1], 100, &ttyNumber) <= 0 || ttyNumber < 1 || ttyNumber > 63) {
-            sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Invalid tty argument\n"));
+            sys_write(1, hc_STR_COMMA_LEN("Invalid tty argument\n"));
             return 1;
         }
         char ttyPath[10] = "/dev/tty\0\0";
@@ -42,14 +50,14 @@ int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
         // Open tty.
         ttyFd = sys_openat(-1, &ttyPath[0], O_RDWR, 0);
         if (ttyFd < 0) {
-            sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Failed to open tty\n"));
+            sys_write(1, hc_STR_COMMA_LEN("Failed to open tty\n"));
             return 1;
         }
 
         // Set the tty as our controlling terminal.
         status = sys_ioctl(ttyFd, TIOCSCTTY, 0);
         if (status < 0) {
-            sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Failed to set controlling terminal\n"));
+            sys_write(1, hc_STR_COMMA_LEN("Failed to set controlling terminal\n"));
             return 1;
         }
 
@@ -114,7 +122,7 @@ int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
             if (info.ssi_signo == SIGUSR1) {
                 if (active) return 1;
                 active = true;
-                sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Acquired!\n"));
+                sys_write(1, hc_STR_COMMA_LEN("Acquired!\n"));
 
                 // Initialise graphics.
                 if (graphics_init(&graphics) < 0) return 1;
@@ -128,7 +136,7 @@ int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
                 if (status < 0) return 1;
 
                 active = false;
-                sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Released!\n"));
+                sys_write(1, hc_STR_COMMA_LEN("Released!\n"));
             }
         }
         if (!active) continue; // Skip drawing if not active.
