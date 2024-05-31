@@ -127,7 +127,7 @@ static void packetDumper_onPacketFd(struct packetDumper *self) {
         struct cmsghdr cmsghdr;
         struct timespec ts[3];
     } cmsg;
-#ifdef hc_DEBUG
+#if hc_DEBUG
     cmsg.cmsghdr.cmsg_type = 0;
 #endif
     struct msghdr recvMsghdr = {

@@ -29,7 +29,7 @@ static void netlink_talk(int32_t fd, struct iovec_const *request, int32_t iovLen
     const struct nlmsghdr *reqHdr = (const void *)request[0].iov_base;
     debug_ASSERT(request[0].iov_len >= (int64_t)sizeof(*reqHdr));
 
-#ifdef hc_DEBUG
+#if hc_DEBUG
     // Check that the header length matches the total iov length.
     int64_t totalLen = 0;
     for (int32_t i = 0; i < iovLen; ++i) totalLen += request[i].iov_len;
@@ -49,7 +49,7 @@ static void netlink_talk(int32_t fd, struct iovec_const *request, int32_t iovLen
     netlink_receive(fd);
 }
 
-static hc_NONULL struct nlattr *netlink_findAttr(struct nlattr *start, const void *end, uint16_t attrType) {
+static struct nlattr *netlink_findAttr(struct nlattr *start, const void *end, uint16_t attrType) {
     for (;;) {
         void *next = (void *)start + math_ALIGN_FORWARD(start->nla_len, 4);
         CHECK(next, RES <= end);

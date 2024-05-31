@@ -13,7 +13,7 @@ static hc_INLINE void genetlink_talk(struct iovec_const *request, int32_t iovLen
     netlink_talk(genetlink.fd, request, iovLen);
 }
 
-static hc_NONULL struct nlattr *genetlink_findAttr(uint16_t attrType) {
+static struct nlattr *genetlink_findAttr(uint16_t attrType) {
     struct nlmsghdr *msgHdr = (void *)&buffer[0];
     struct nlattr *start = (void *)&buffer[sizeof(*msgHdr) + sizeof(struct genlmsghdr)];
     void *end = &buffer[msgHdr->nlmsg_len];
