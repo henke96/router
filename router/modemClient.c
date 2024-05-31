@@ -240,7 +240,7 @@ static void modemClient_onFd(struct modemClient *self) {
 
         // Error.
         if (lineLength == 5 && mem_compare(&bufferLineStart[0], hc_STR_COMMA_LEN("ERROR")) == 0) {
-            sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("AT error\n"));
+            sys_write(1, hc_STR_COMMA_LEN("AT error\n"));
             goto out_fail;
         }
 

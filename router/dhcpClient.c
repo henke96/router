@@ -95,7 +95,7 @@ static void dhcpClient_onTimerFd(void) {
     } else {
         // Either we had no leased IP, or we failed to renew it.
         if (dhcpClient.leasedIp != 0) {
-            sys_write(STDOUT_FILENO, hc_STR_COMMA_LEN("Lost IP lease\n"));
+            sys_write(1, hc_STR_COMMA_LEN("Lost IP lease\n"));
 
             // Remove the IP.
             struct addrRequest {
@@ -294,7 +294,7 @@ static void dhcpClient_onFd(void) {
                     { pos, (int64_t)(&printBuffer[18] - pos) },
                     { hc_STR_COMMA_LEN("\n") }
                 };
-                sys_writev(STDOUT_FILENO, &print[0], hc_ARRAY_LEN(print));
+                sys_writev(1, &print[0], hc_ARRAY_LEN(print));
             }
 
             // Add the address.

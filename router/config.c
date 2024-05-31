@@ -218,7 +218,7 @@ static void config_printWgPublicKey(void) {
         { &base64PublicKey[0], sizeof(base64PublicKey) },
         { hc_STR_COMMA_LEN("\n") }
     };
-    int64_t written = sys_writev(STDOUT_FILENO, &print[0], hc_ARRAY_LEN(print));
+    int64_t written = sys_writev(1, &print[0], hc_ARRAY_LEN(print));
     CHECK(written, RES == (sizeof(config_PRINT_WG_PK_STR) - 1) + sizeof(base64PublicKey) + 1);
 }
 

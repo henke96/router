@@ -31,7 +31,7 @@ mv arch/x86/boot/bzImage "$OUT/$SCRIPT_NAME/"
 export DEBUG_PREFIX=debug_
 ./usr/gen_init_cpio -t 0 "$SCRIPT_DIR/files/linux/initramfs" > ./initramfs.cpio
 make -j "$NUM_CPUS" $llvm_tools HOSTCC="$CC"
-mv arch/x86/boot/bzImage "$OUT/$SCRIPT_NAME/debug-bzImage"
+mv arch/x86/boot/bzImage "$OUT/$SCRIPT_NAME/debug_bzImage"
 
 rm -rf "$PWD"
 recipe_finish

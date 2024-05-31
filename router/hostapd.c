@@ -41,7 +41,7 @@ static void hostapd_init(void) {
     // Write hostapd.conf.
     fd = sys_openat(-1, "/hostapd.conf", O_WRONLY | O_CREAT | O_TRUNC, 0664);
     CHECK(fd, RES > 0);
-    CHECK(sys_write(fd, hc_STR_COMMA_LEN(hostapd_CONF)), RES == sizeof(hostapd_CONF) - 1);
+    CHECK(sys_write(fd, hc_STR_COMMA_LEN(hostapd_CONF)), RES == hc_STR_LEN(hostapd_CONF));
     CHECK(sys_write(fd, &buffer[0], passwordSize), RES == passwordSize);
     debug_CHECK(sys_close(fd), RES == 0);
 

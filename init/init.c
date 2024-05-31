@@ -34,8 +34,8 @@ static int32_t initialise(void) {
     return 0;
 }
 
-static noreturn void busybox(hc_UNUSED void *arg) {
-    const char *newArgv[] = { "/bash", NULL };
+static noreturn void run(void *program) {
+    const char *newArgv[] = { program, NULL };
     const char *newEnvp[] = { NULL };
     sys_execveat(-1, newArgv[0], &newArgv[0], &newEnvp[0], 0);
     sys_exit_group(1);
@@ -49,23 +49,17 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
         goto halt;
     }
 
-    // Parse volume id from bootloader.
-    int32_t cmdlineFd = sys_openat(-1, "/proc/cmdline", O_RDONLY, 0);
-    if (cmdlineFd < 0) goto halt;
-    if (sys_read(cmdlineFd, &buffer[0], 8) != 8) goto halt;
-    if (sys_close(cmdlineFd) != 0) goto halt;
-
-    uint64_t volumeId;
-    if (util_hexToUint(&buffer[0], 8, &volumeId) <= 0) goto halt;
-
     struct clone_args args = {
         .flags = CLONE_VM | CLONE_VFORK,
         .exit_signal = SIGCHLD,
         .stack = &buffer[0],
         .stack_size = sizeof(buffer)
     };
-    status = sys_clone3_func(&args, sizeof(args), busybox, NULL);
-    if (status < 0) goto halt;
+    int32_t shellPid = sys_clone3_func(&args, sizeof(args), run, "/bash");
+    if (shellPid < 0) goto halt;
+
+    int32_t routerPid = sys_clone3_func(&args, sizeof(args), run, "/router");
+    if (routerPid < 0) goto halt;
 
     // Wait for children.
     for (;;) {
@@ -89,11 +83,12 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
             { maxRssStr, (int64_t)(&buffer[MAXRSS_END] - maxRssStr) },
             { hc_STR_COMMA_LEN(")\n") }
         };
-        sys_writev(STDOUT_FILENO, &iov[0], hc_ARRAY_LEN(iov));
+        sys_writev(1, &iov[0], hc_ARRAY_LEN(iov));
 
-        // Currently we only have the router process, so shutdown if it exits.
-        //if (status == 0) cleanExit = true;
-        //goto halt;
+        if (pid == routerPid || pid == shellPid) {
+            if (pid == shellPid || status == 0) cleanExit = true;
+            goto halt;
+        }
     }
 
     halt:

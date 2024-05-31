@@ -2,12 +2,12 @@
 set -e
 script_dir="$(cd -- "${0%/*}/" && pwd)"
 
-"$script_dir/recipes/bootloader_x86_64"
+"$script_dir/recipes/linux_x86_64"
 
 rm -rf "$OUT/out"
 mkdir -p "$OUT/out/efi/boot"
-cp "$OUT/bootloader_x86_64/x86_64-windows-gnu_bootloader.efi" "$OUT/out/efi/boot/bootx64.efi"
-cp "$OUT/bootloader_x86_64/debug_x86_64-windows-gnu_bootloader.efi" "$OUT/out/efi/boot/debug_bootx64.efi"
+cp "$OUT/linux_x86_64/bzImage" "$OUT/out/efi/boot/bootx64.efi"
+cp "$OUT/linux_x86_64/debug_bzImage" "$OUT/out/efi/boot/debug_bootx64.efi"
 
 if test -z "$NO_SOURCE"; then
     "$script_dir/recipes/source"
