@@ -1,5 +1,3 @@
-#define ksmb_DISK_PATH "/disk"
-
 struct ksmb {
     int32_t netlinkFd;
     uint16_t familyId;
@@ -112,8 +110,8 @@ static void ksmb_onNetlinkFd(void) {
 
             uint16_t status = KSMBD_TREE_CONN_STATUS_NO_SHARE;
             if (
-                util_cstrCmp(&request->share[0], "config") == 0 ||
-                (util_cstrCmp(&request->share[0], "data") == 0 && sys_faccessat(-1, ksmb_DISK_PATH "/data", 0) == 0)
+                (util_cstrCmp(&request->share[0], "config") == 0 && sys_faccessat(-1, "/disk/config", 0) == 0) ||
+                (util_cstrCmp(&request->share[0], "data") == 0 && sys_faccessat(-1, "/disk/data", 0) == 0)
             ) status = KSMBD_TREE_CONN_STATUS_OK;
 
             struct {
@@ -180,10 +178,10 @@ static void ksmb_onNetlinkFd(void) {
                 },
             };
             if (util_cstrCmp(&request->share_name[0], "config") == 0) {
-                hc_MEMCPY(&shareResponse.path[0], hc_STR_COMMA_LEN("/mnt/config"));
+                hc_MEMCPY(&shareResponse.path[0], hc_STR_COMMA_LEN("/disk/config"));
                 shareResponse.response.flags = KSMBD_SHARE_FLAG_AVAILABLE | KSMBD_SHARE_FLAG_BROWSEABLE | KSMBD_SHARE_FLAG_WRITEABLE;
             } else if (util_cstrCmp(&request->share_name[0], "data") == 0) {
-                hc_MEMCPY(&shareResponse.path[0], hc_STR_COMMA_LEN(ksmb_DISK_PATH "/data"));
+                hc_MEMCPY(&shareResponse.path[0], hc_STR_COMMA_LEN("/disk/data"));
                 shareResponse.response.flags = KSMBD_SHARE_FLAG_AVAILABLE | KSMBD_SHARE_FLAG_BROWSEABLE | KSMBD_SHARE_FLAG_WRITEABLE;
             }
             struct iovec_const iov[] = { { &shareResponse, sizeof(shareResponse) } };

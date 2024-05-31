@@ -2,6 +2,7 @@ dir /proc 0555 0 0
 dir /sys 0555 0 0
 dir /tmp 0755 0 0
 dir /mnt 0755 0 0
+dir /disk 0755 0 0
 
 dir /dev 0755 0 0
 nod /dev/console 0600 0 0 c 5 1

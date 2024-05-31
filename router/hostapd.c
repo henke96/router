@@ -20,7 +20,7 @@ wpa_passphrase="
 
 static noreturn void _hostapd(hc_UNUSED void *arg) {
     if (sys_close_range(3, INT32_MAX, CLOSE_RANGE_UNSHARE) == 0) {
-        const char *argv[] = { "/hostapd", "/hostapd.conf", NULL };
+        const char *argv[] = { "/hostapd", "/tmp/hostapd.conf", NULL };
         const char *envp[] = { NULL };
         sys_execveat(-1, argv[0], &argv[0], &envp[0], 0);
     }
@@ -31,7 +31,7 @@ static void hostapd_init(void) {
     hostapd.pidFd = INT32_MIN;
 
     // Read config.
-    int32_t fd = sys_openat(-1, "/mnt/config/wifi/password", O_RDONLY, 0);
+    int32_t fd = sys_openat(-1, "/disk/config/wifi/password", O_RDONLY, 0);
     if (fd == -ENOENT) return;
     CHECK(fd, RES > 0);
     int64_t passwordSize = sys_read(fd, &buffer[0], sizeof(buffer));
@@ -39,7 +39,7 @@ static void hostapd_init(void) {
     debug_CHECK(sys_close(fd), RES == 0);
 
     // Write hostapd.conf.
-    fd = sys_openat(-1, "/hostapd.conf", O_WRONLY | O_CREAT | O_TRUNC, 0664);
+    fd = sys_openat(-1, "/tmp/hostapd.conf", O_WRONLY | O_CREAT | O_TRUNC, 0664);
     CHECK(fd, RES > 0);
     CHECK(sys_write(fd, hc_STR_COMMA_LEN(hostapd_CONF)), RES == hc_STR_LEN(hostapd_CONF));
     CHECK(sys_write(fd, &buffer[0], passwordSize), RES == passwordSize);

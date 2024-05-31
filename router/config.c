@@ -219,7 +219,7 @@ static void config_printWgPublicKey(void) {
         { hc_STR_COMMA_LEN("\n") }
     };
     int64_t written = sys_writev(1, &print[0], hc_ARRAY_LEN(print));
-    CHECK(written, RES == (sizeof(config_PRINT_WG_PK_STR) - 1) + sizeof(base64PublicKey) + 1);
+    CHECK(written, RES == hc_STR_LEN(config_PRINT_WG_PK_STR) + sizeof(base64PublicKey) + hc_STR_LEN("\n"));
 }
 
 static void config_setWgDevice(void) {
@@ -312,7 +312,7 @@ static void config_setWgDevice(void) {
         .peer1AllowedIpNetmask = 32
     };
     // Read private key.
-    int32_t fd = sys_openat(-1, "/mnt/config/wg/key", O_RDONLY, 0);
+    int32_t fd = sys_openat(-1, "/disk/config/wg/key", O_RDONLY, 0);
     if (fd == -ENOENT) return;
     CHECK(fd, RES > 0);
     CHECK(sys_read(fd, &request.privateKey, sizeof(request.privateKey)), RES == sizeof(request.privateKey));

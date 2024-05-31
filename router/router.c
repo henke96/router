@@ -16,6 +16,7 @@
 // Shared buffer space for whole program.
 static char buffer[66000] hc_ALIGNED(16); // Netlink wants 8192, see NLMSG_GOODSIZE in <linux/netlink.h>.
                                           // packetDumper wants to support jumbo frames, so use 66000 to be (very) safe.
+#define buffer_HALF (sizeof(buffer) / 2)
 
 static void epollAdd(int32_t epollFd, int32_t fd) {
     int32_t status = sys_epoll_ctl(
@@ -27,6 +28,7 @@ static void epollAdd(int32_t epollFd, int32_t fd) {
     CHECK(status, RES == 0);
 }
 
+#include "disk.c"
 #include "dhcp.h"
 #include "netlink/netlink.c"
 #include "netlink/genetlink.c"
@@ -41,6 +43,8 @@ static void epollAdd(int32_t epollFd, int32_t fd) {
 #include "hostapd.c"
 
 int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **envp) {
+    disk_mount();
+
     genetlink_init();
 
     acpi_init();
