@@ -17,6 +17,11 @@ fi
 if test -z "$NO_DOWNLOADS"; then
     "$script_dir/recipes/downloads"
     cp -r "$OUT/downloads/out" "$OUT/out/downloads"
+
+    if test -z "$NO_DOWNLOADS_EXTRA"; then
+        "$script_dir/recipesExtra/downloadsExtra"
+        cp -r "$OUT/downloadsExtra/out/"* "$OUT/out/downloads/"
+    fi
 fi
 
 if test -z "$NO_DEVTOOLS"; then

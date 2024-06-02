@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/files/urls"
 sha512="89a67ebfbbc764cc456e8825ecfa90707741f8835b1b2adffae0b227ab1fe5ca9cce75b0efaffc9ca8431cae528dc54fd838867a56a2b645344d9e82d19ab1b7"
 
-DEPENDENCIES="make xz python cmake musl-headers_x86_64"
+DEPENDENCIES="make xz python cmake musl_headers_x86_64"
 
 recipe_start
 export PATH="$OUT/make/bin:$OUT/xz/bin:$OUT/python/bin:$OUT/cmake/bin:$PATH"
@@ -39,7 +39,7 @@ cmake -S llvm -B build -G "Unix Makefiles" -Wno-dev \
 -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-musl" \
 -DBUILTINS_x86_64-unknown-linux-musl_CMAKE_SYSTEM_NAME=Linux \
 -DBUILTINS_x86_64-unknown-linux-musl_CMAKE_FIND_USE_CMAKE_SYSTEM_PATH=NO \
--DBUILTINS_x86_64-unknown-linux-musl_CMAKE_SYSROOT="$OUT/musl-headers_x86_64" \
+-DBUILTINS_x86_64-unknown-linux-musl_CMAKE_SYSROOT="$OUT/musl_headers_x86_64" \
 -DBUILTINS_x86_64-unknown-linux-musl_CMAKE_C_FLAGS="-ffile-prefix-map=$PWD=." \
 -DRUNTIMES_x86_64-unknown-linux-musl_CMAKE_SYSTEM_NAME=Linux \
 -DRUNTIMES_x86_64-unknown-linux-musl_CMAKE_FIND_USE_CMAKE_SYSTEM_PATH=NO \
