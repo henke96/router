@@ -54,6 +54,8 @@ test -f "$OUT/disk2.img" || dd if=/dev/zero of="$OUT/disk2.img" bs=1048576 count
 qemu-system-x86_64 \
 -bios /usr/share/qemu/OVMF.fd \
 -cpu host \
+-device qemu-xhci \
+-device usb-kbd \
 -smp "$NUM_CPUS" \
 -m "${NUM_CPUS}G" \
 -drive format=raw,file=$OUT/disk1.img \
