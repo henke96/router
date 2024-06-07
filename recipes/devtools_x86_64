@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 
 . "$SCRIPT_DIR/files/urls"
 
-DEPENDENCIES="hc llvm_x86_64 linux_headers_x86_64 musl_x86_64 coreutils_x86_64 bash_x86_64 gzip_x86_64 tar_x86_64 sed_x86_64 diffutils_x86_64 findutils_x86_64 grep_x86_64 mawk_x86_64"
+DEPENDENCIES="hc llvm_x86_64 musl_x86_64 coreutils_x86_64 bash_x86_64 gzip_x86_64 tar_x86_64 sed_x86_64 diffutils_x86_64 findutils_x86_64 grep_x86_64 mawk_x86_64"
 
 recipe_start
 mkdir bin
@@ -65,19 +65,17 @@ echo 'exec "$sysroot/lib/libc.so" --list "$@"' >> bin/ldd
 
 "$OUT/hc/tar" \
 -o devtools.tar \
--p devtools \
--r . \
--a bin \
--r "$OUT/llvm_x86_64" \
--a include \
--a lib \
--r "$OUT/llvm" \
--a lib \
--r "$OUT/linux_headers_x86_64" \
--a include \
--r "$OUT/musl_x86_64" \
--a include \
--a lib
+-d devtools -p devtools \
+-d bin -d lib -d include \
+-p devtools/bin \
+-a ./bin \
+-p devtools/lib \
+-a "$OUT/llvm/lib" \
+-a "$OUT/musl_x86_64/lib" \
+-p devtools/include \
+-a "$OUT/llvm_x86_64/include" \
+-a "$OUT/musl_x86_64/include"
+
 
 rm -rf ./bin
 recipe_finish

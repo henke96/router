@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/files/urls"
 sha512="458b2c34d46206f9b4ccbac54cc57aeca1eaecaf831bc441e59701bac6eadffc17f6ce24af6eadd0454964e843186539ac0d63295ad2cc32d112b60360c39a35"
 
-DEPENDENCIES="make xz llvm bc flex bison elfutils perl linux-firmware wireless-regdb init router utilities hostapd_x86_64 bash_x86_64 tar_x86_64"
+DEPENDENCIES="make xz hc bc flex bison elfutils perl linux-firmware wireless-regdb init router utilities hostapd_x86_64 bash_x86_64"
 DIR_DEPENDENCIES="files/linux"
 
 recipe_start

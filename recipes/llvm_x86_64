@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/files/urls"
 sha512="89a67ebfbbc764cc456e8825ecfa90707741f8835b1b2adffae0b227ab1fe5ca9cce75b0efaffc9ca8431cae528dc54fd838867a56a2b645344d9e82d19ab1b7"
 
-DEPENDENCIES="make xz python cmake llvm musl_x86_64 linux_headers_x86_64"
+DEPENDENCIES="make xz python cmake llvm musl_x86_64"
 
 recipe_start
 export PATH="$OUT/make/bin:$OUT/xz/bin:$OUT/python/bin:$OUT/cmake/bin:$OUT/llvm/bin:$PATH"
@@ -28,7 +28,6 @@ cmake -S runtimes -B libcxxbuild -G "Unix Makefiles" -Wno-dev \
 -DLIBCXX_ENABLE_STATIC=ON \
 -DLIBCXX_ENABLE_SHARED=OFF \
 -DLIBCXX_HAS_MUSL_LIBC=ON \
--DLIBCXX_ADDITIONAL_COMPILE_FLAGS="-I$OUT/linux_headers_$arch/include" \
 -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
 -DLIBCXX_CXX_ABI="libcxxabi" \
 -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON \

@@ -9,7 +9,6 @@ DIR_DEPENDENCIES=".."
 recipe_start
 "$OUT/hc/tar" \
 -o source.tar \
--p source \
--r "$SCRIPT_DIR/.." \
--a .
+-d source -p source \
+-a "$SCRIPT_DIR/.."
 recipe_finish
