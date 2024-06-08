@@ -5,7 +5,6 @@
 #include "hc/linux/linux.h"
 #include "hc/linux/sys.c"
 #include "hc/linux/debug.c"
-#include "hc/linux/util.c"
 #include "hc/linux/helpers/_start.c"
 
 int32_t start(int32_t argc, char **argv, char **envp) {

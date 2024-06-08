@@ -17,8 +17,8 @@ file /router ../../router/${DEBUG_PREFIX}${ARCH}-linux_router 0755 0 0
 file /hostapd ../../hostapd_${ARCH}/hostapd 0755 0 0
 
 file /mount ../../utilities/${DEBUG_PREFIX}${ARCH}-linux_mount 0755 0 0
+file /shell ../../utilities/${DEBUG_PREFIX}${ARCH}-linux_shell 0755 0 0
 file /untar ../../hc/${DEBUG_PREFIX}${ARCH}-linux_untar 0755 0 0
-file /bash ../../bash_${ARCH}/bin/bash 0755 0 0
 
 slink /usr / 0755 0 0
 dir /bin 0755 0 0

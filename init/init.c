@@ -6,7 +6,6 @@
 #include "hc/linux/linux.h"
 #include "hc/linux/sys.c"
 #include "hc/linux/debug.c"
-#include "hc/linux/util.c"
 #include "hc/linux/helpers/_start.c"
 #include "hc/linux/helpers/sys_clone3_func.c"
 
@@ -55,7 +54,7 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
         .stack = &buffer[0],
         .stack_size = sizeof(buffer)
     };
-    int32_t shellPid = sys_clone3_func(&args, sizeof(args), run, "/bash");
+    int32_t shellPid = sys_clone3_func(&args, sizeof(args), run, "/shell");
     if (shellPid < 0) goto halt;
 
     int32_t routerPid = sys_clone3_func(&args, sizeof(args), run, "/router");
@@ -86,7 +85,7 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
         sys_writev(1, &iov[0], hc_ARRAY_LEN(iov));
 
         if (pid == routerPid || pid == shellPid) {
-            if (pid == shellPid || status == 0) cleanExit = true;
+            if (status == 0) cleanExit = true;
             goto halt;
         }
     }
