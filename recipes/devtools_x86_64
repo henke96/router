@@ -29,6 +29,8 @@ echo '#!/bin/sh --
 echo "$@"' > bin/echo
 echo '#!/bin/sh --
 printf "$@"' > bin/printf
+echo '#!/bin/sh --
+test "$@"' > bin/test
 cat > bin/cc <<"end"
 #!/bin/sh --
 case "$0" in
