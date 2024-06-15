@@ -35,7 +35,7 @@ static int32_t initialise(void) {
 
 static noreturn void run(void *program) {
     const char *newArgv[] = { program, NULL };
-    const char *newEnvp[] = { NULL };
+    const char *newEnvp[] = { "HOME=/", "PATH=/devtools/bin", NULL };
     sys_execveat(-1, newArgv[0], &newArgv[0], &newEnvp[0], 0);
     sys_exit_group(1);
 }

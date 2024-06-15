@@ -19,7 +19,7 @@ hostcc="$CC"
 
 export CC=clang AR=llvm-ar RANLIB=true
 export CFLAGS="-target $arch-unknown-linux-musl"
-export LDFLAGS="-Wl,--hash-style=gnu,-znow,-znorelro" # Override clang distro detection based flags.
+export LDFLAGS="-target $arch-unknown-linux-musl -Wl,--hash-style=gnu,-znow,-znorelro" # Override clang distro detection based flags.
 export LIBCC="$("$CC" $CFLAGS --print-libgcc-file-name)"
 ./configure --prefix= --target=$arch
 make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME"

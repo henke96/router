@@ -16,7 +16,7 @@ cd ./libnl-3.8.0
 arch=x86_64
 export CC=clang AR=llvm-ar RANLIB=true
 export CFLAGS="-target $arch-unknown-linux-musl --sysroot $OUT/musl_$arch -Os -ffunction-sections -fno-asynchronous-unwind-tables"
-export LDFLAGS="-Wl,--gc-sections"
+export LDFLAGS="-target $arch-unknown-linux-musl --sysroot $OUT/musl_$arch -Wl,--gc-sections"
 # https://savannah.gnu.org/support/?110846
 sed -e 's/cross_compiling=maybe/cross_compiling=yes/' ./configure > ./sed.temp
 mv ./sed.temp ./configure
