@@ -13,10 +13,20 @@ export PATH="$OUT/make/bin:$PATH"
 gzip -d -c "$(recipe_download "$url_bash" "$sha512")" | tar xf -
 cd ./bash-5.2.21
 
+# Fixed in devel branch.
+sed -e 's/cleanup_dead_jobs PARAMS((void));/cleanup_dead_jobs PARAMS((void)); extern int count_all_jobs PARAMS((void));/' ./y.tab.c > ./sed.temp
+mv ./sed.temp ./y.tab.c
+
 export CFLAGS="-I$OUT/ncurses/include"
 export LDFLAGS="-L$OUT/ncurses/lib"
-./configure bash_cv_termcap_lib=libncurses --prefix="$OUT/$SCRIPT_NAME" --disable-job-control --disable-prompt-string-decoding --disable-nls --without-bash-malloc --without-libpth-prefix --without-libiconv-prefix --without-libintl-prefix
+./configure bash_cv_termcap_lib=libncurses --prefix="$OUT/$SCRIPT_NAME" --disable-job-control --disable-nls --without-bash-malloc --without-libpth-prefix --without-libiconv-prefix --without-libintl-prefix
 make -j "$NUM_CPUS" install
+
+cat > "$OUT/$SCRIPT_NAME/bashrc" <<"end"
+HISTCONTROL=ignoreboth
+PS1="\[\033[01;34m\]\w\[\033[00m\]# "
+alias ls='ls --color=auto'
+end
 
 rm -rf "$PWD"
 recipe_finish

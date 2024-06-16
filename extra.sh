@@ -1,6 +1,7 @@
 #!/bin/sh --
 set -e
 script_dir="$(cd -- "${0%/*}/" && pwd)"
+OUT="$(cd -- "$OUT" && pwd)"
 
 for pkg in bash e2fsprogs ncurses nano; do
     "$script_dir/recipesExtra/$pkg"
@@ -19,5 +20,4 @@ if test -n "$EXTRA_ALL"; then
     done
 fi
 
-echo "Entering bash"
-exec bash
+exec bash --rcfile "$OUT/bash/bashrc"
