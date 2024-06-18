@@ -3,7 +3,7 @@ set -e
 script_dir="$(cd -- "${0%/*}/" && pwd)"
 OUT="$(cd -- "$OUT" && pwd)"
 
-for pkg in bash e2fsprogs ncurses nano; do
+for pkg in bash e2fsprogs ncurses nano utilitiesExtra; do
     "$script_dir/recipesExtra/$pkg"
     export PATH="$OUT/$pkg/bin:$PATH"
 done
@@ -20,4 +20,4 @@ if test -n "$EXTRA_ALL"; then
     done
 fi
 
-exec bash --rcfile "$OUT/bash/bashrc"
+exec setsid "$OUT/bash/bin/bash" --rcfile "$OUT/bash/bashrc"

@@ -9,7 +9,7 @@
 
 int32_t start(int32_t argc, char **argv, char **envp) {
     if (argc < 2) {
-        sys_write(1, hc_STR_COMMA_LEN("Usage: env COMMAND [ARG]...\n"));
+        sys_write(1, hc_STR_COMMA_LEN("Usage: env PROGRAM [ARG]...\n"));
         return 1;
     }
     char *path = util_getEnv(envp, "PATH");
