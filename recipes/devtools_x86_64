@@ -10,7 +10,7 @@ DEPENDENCIES="hc llvm_x86_64 musl_x86_64 coreutils_x86_64 bash_x86_64 gzip_x86_6
 recipe_start
 mkdir bin
 cp "$OUT/llvm_x86_64/bin/clang-16" bin/clang
-cp "$OUT/llvm_x86_64/bin/lld" bin/ld
+cp "$OUT/llvm_x86_64/bin/lld" bin/ld.lld
 cp "$OUT/llvm_x86_64/bin/llvm-ar" bin/ar
 cp "$OUT/coreutils_x86_64/bin/coreutils" bin/
 cp "$OUT/bash_x86_64/bin/bash" bin/sh
@@ -23,6 +23,16 @@ cp "$OUT/findutils_x86_64/bin/find" bin/
 cp "$OUT/findutils_x86_64/bin/xargs" bin/
 cp "$OUT/grep_x86_64/bin/grep" bin/
 cp "$OUT/mawk_x86_64/bin/mawk" bin/awk
+
+mkdir lib
+cp "$OUT/musl_x86_64/lib/Scrt1.o" lib/
+cp "$OUT/musl_x86_64/lib/crti.o" lib/
+cp "$OUT/musl_x86_64/lib/crtn.o" lib/
+cp "$OUT/musl_x86_64/lib/libc.so" lib/
+cp "$OUT/musl_x86_64/lib/libdl.a" lib/
+cp "$OUT/musl_x86_64/lib/libm.a" lib/
+cp "$OUT/musl_x86_64/lib/libpthread.a" lib/
+cp "$OUT/musl_x86_64/lib/librt.a" lib/
 
 echo '#!/bin/sh --' > bin/true
 echo '#!/bin/sh --
@@ -49,6 +59,7 @@ sysroot="$(cd -- "$script_dir/.." && pwd)"
 end
 cp bin/cc bin/c++
 cp bin/cc bin/cpp
+cp bin/cc bin/ld
 cp bin/cc bin/ldd
 setup_coreutils_wrappers() {
     for prog in "$@"; do
@@ -63,6 +74,7 @@ echo 'exec "$sysroot/bin/coreutils" --coreutils-prog=ginstall "$@"' >> bin/insta
 echo 'exec "$sysroot/bin/clang" -Wno-unused-command-line-argument -Wl,-dynamic-linker="$sysroot/lib/libc.so" "$@"' >> bin/cc
 echo 'exec "$sysroot/bin/clang" --driver-mode=g++ -Wno-unused-command-line-argument -Wl,-dynamic-linker="$sysroot/lib/libc.so" "$@"' >> bin/c++
 echo 'exec "$sysroot/bin/clang" --driver-mode=cpp "$@"' >> bin/cpp
+echo 'exec "$sysroot/bin/ld.lld" "$@"' >> bin/ld
 echo 'exec "$sysroot/lib/libc.so" --list "$@"' >> bin/ldd
 
 "$OUT/hc/tar" \
@@ -73,7 +85,8 @@ echo 'exec "$sysroot/lib/libc.so" --list "$@"' >> bin/ldd
 -a ./bin \
 -p devtools/lib \
 -a "$OUT/llvm/lib" \
--a "$OUT/musl_x86_64/lib" \
+-a "$OUT/llvm_x86_64/lib" \
+-a ./lib \
 -p devtools/include \
 -a "$OUT/llvm_x86_64/include" \
 -a "$OUT/musl_x86_64/include"

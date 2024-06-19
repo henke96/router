@@ -3,12 +3,10 @@ set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 . "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
 
-DEPENDENCIES="../recipes/hc"
-DIR_DEPENDENCIES="../utilities"
+DIR_DEPENDENCIES="../utilities ../hc"
 
 recipe_start
 mkdir "$OUT/$SCRIPT_NAME/bin"
-export LLVM="$OUT/llvm"
 export ARCH="$(uname -m)"
 export ABI="linux"
 "$SCRIPT_DIR/../hc/cc.sh" -Os -s -o "$OUT/$SCRIPT_NAME/bin/setsid" "$SCRIPT_DIR/../utilities/setsid.c"
