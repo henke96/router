@@ -1,32 +1,37 @@
-static int32_t init(char **includePaths) {
-    while (*includePaths != NULL) {
-        int32_t fd = openat(AT_FDCWD, *includePaths, O_RDONLY, 0);
-        if (fd < 0) return -1;
-
-        if (allocator_resize(&htmlPacker_alloc, htmlPacker_alloc.size + (int64_t)sizeof(fd)) < 0) return -2;
-        *((int32_t *)&htmlPacker_alloc.mem[htmlPacker_alloc.size] - 1) = fd;
-        ++includePaths;
-    }
-    htmlPacker_buffer = &htmlPacker_alloc.mem[htmlPacker_alloc.size];
-    return 0;
-}
-
 static void deinit(void) {
-    for (int32_t *includePathFd = htmlPacker_alloc.mem; (char *)includePathFd != htmlPacker_buffer; ++includePathFd) {
+    for (int32_t *includePathFd = webPacker_alloc.mem; (char *)includePathFd != webPacker_buffer; ++includePathFd) {
         debug_CHECK(close(*includePathFd), RES == 0);
     }
 }
 
+static int32_t init(char **includePaths) {
+    int64_t i = 0;
+    int32_t *includeFds = webPacker_alloc.mem;
+    for (; includePaths[i] != NULL; ++i) {
+        if (allocator_resize(&webPacker_alloc, (i + 1) * (int64_t)sizeof(int32_t)) < 0) break;
+
+        int32_t fd = openat(AT_FDCWD, includePaths[i], O_RDONLY, 0);
+        if (fd < 0) break;
+        includeFds[i] = fd;
+    }
+    webPacker_buffer = (void *)&includeFds[i];
+    if (includePaths[i] != NULL) {
+        deinit();
+        return -1;
+    }
+    return 0;
+}
+
 static int32_t replaceWithFile(int64_t replaceIndex, int64_t replaceSize, char *path, int32_t pathLen, bool asBase64) {
     // Add null terminator to path.
-    char *pathZ = &htmlPacker_alloc.mem[htmlPacker_alloc.size];
-    if (allocator_resize(&htmlPacker_alloc, htmlPacker_alloc.size + (int64_t)pathLen + 1) < 0) return -1;
+    char *pathZ = &webPacker_alloc.mem[webPacker_alloc.size];
+    if (allocator_resize(&webPacker_alloc, webPacker_alloc.size + (int64_t)pathLen + 1) < 0) return -1;
     hc_MEMCPY(pathZ, path, (uint64_t)pathLen);
     pathZ[pathLen] = '\0';
 
     // Find and open path relative to include paths.
     int32_t pathFd;
-    for (int32_t *includePathFd = htmlPacker_alloc.mem; (char *)includePathFd != htmlPacker_buffer; ++includePathFd) {
+    for (int32_t *includePathFd = webPacker_alloc.mem; (char *)includePathFd != webPacker_buffer; ++includePathFd) {
         pathFd = openat(*includePathFd, pathZ, O_RDONLY, 0);
         if (pathFd >= 0) goto foundPath;
     }
@@ -36,7 +41,6 @@ static int32_t replaceWithFile(int64_t replaceIndex, int64_t replaceSize, char *
     // Get file size.
     int32_t status;
     struct stat contentStat;
-    contentStat.st_size = 0; // Make static analysis happy.
     if (fstatat(pathFd, "", &contentStat, AT_EMPTY_PATH) < 0) {
         status = -3;
         goto cleanup_pathFd;
@@ -47,30 +51,30 @@ static int32_t replaceWithFile(int64_t replaceIndex, int64_t replaceSize, char *
     int64_t insertSize = contentSize;
     if (asBase64) insertSize = base64_ENCODE_SIZE(contentSize);
 
+    int64_t newBufferSize = webPacker_bufferSize + (insertSize - replaceSize);
     // Allocate an extra byte to be able to verify EOF when reading.
-    int64_t newBufferSize = 1 + htmlPacker_bufferSize + (insertSize - replaceSize);
-    if (allocator_resize(&htmlPacker_alloc, &htmlPacker_buffer[newBufferSize] - (char *)htmlPacker_alloc.mem) < 0) {
+    if (allocator_resize(&webPacker_alloc, &webPacker_buffer[newBufferSize + 1] - (char *)webPacker_alloc.mem) < 0) {
         status = -4;
         goto cleanup_pathFd;
     }
 
     // Move existing content to make room.
     hc_MEMMOVE(
-        &htmlPacker_buffer[replaceIndex + insertSize],
-        &htmlPacker_buffer[replaceIndex + replaceSize],
-        (uint64_t)(htmlPacker_bufferSize - (replaceSize + replaceIndex))
+        &webPacker_buffer[replaceIndex + insertSize],
+        &webPacker_buffer[replaceIndex + replaceSize],
+        (uint64_t)(webPacker_bufferSize - (replaceSize + replaceIndex))
     );
-    htmlPacker_bufferSize = newBufferSize;
+    webPacker_bufferSize = newBufferSize;
 
     // Read content into buffer, and verify EOF by attempting to read an extra byte.
-    char *content = &htmlPacker_buffer[replaceIndex + insertSize - contentSize];
+    char *content = &webPacker_buffer[replaceIndex + insertSize - contentSize];
     if (util_readAll(pathFd, content, contentSize + 1) != contentSize) {
         status = -5;
         goto cleanup_pathFd;
     }
 
     // Convert to base 64 if requested. Can be done in place as we put content at end of insert gap.
-    if (asBase64) base64_encode(&htmlPacker_buffer[replaceIndex], &content[0], contentSize);
+    if (asBase64) base64_encode(&webPacker_buffer[replaceIndex], content, contentSize);
 
     status = 0;
     cleanup_pathFd:
