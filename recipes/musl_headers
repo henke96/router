@@ -1,7 +1,7 @@
 #!/bin/sh --
 set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
-. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+. "$SCRIPT_DIR/../hc/src/shell/recipe.sh"
 
 . "$SCRIPT_DIR/files/urls"
 sha512="498ec5d7941194a8806f4d42f0f6d218c862996ef1398b737d0d06995e0b7a6574b240a48088f6b84016b14b2776fe463f829dcb11149cdfc1023d496b235c55"

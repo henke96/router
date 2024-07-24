@@ -1,14 +1,14 @@
 #!/bin/sh --
 set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
-. "$SCRIPT_DIR/../hc/tools/shell/recipe.sh"
+. "$SCRIPT_DIR/../hc/src/shell/recipe.sh"
 
 DEPENDENCIES="llvm"
 DIR_DEPENDENCIES="../hc"
 
 recipe_start
 export LLVM="$OUT/llvm"
-OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/tar/build.sh"
+OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/tar/hostbuild.sh"
 
 export ARCH=x86_64
 export ABI=linux
