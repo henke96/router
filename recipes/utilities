@@ -28,6 +28,11 @@ OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../uti
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_shell"
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug_$ARCH-${ABI}_shell"
 
+OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../utilities/devsetup.c"
+"$SCRIPT_DIR/../hc/objcopy.sh" --strip-sections "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_devsetup"
+touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_devsetup"
+touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug_$ARCH-${ABI}_devsetup"
+
 echo '#!/usr/bin/env sh
 exec sh "$@"
 ' > "$OUT/$SCRIPT_NAME/sh"

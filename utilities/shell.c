@@ -14,19 +14,19 @@
 #include "hc/ix/util.c"
 
 static char shell_buffer[65536] hc_ALIGNED(16);
-static char shell_stack[4096] hc_ALIGNED(16);
-static char *shell_argv[256];
-static int32_t shell_execErrno;
 
 #define PROMPT "Shell usage: program^@arg1^@arg2^D^D or ^D to exit\n"
 #define INVALID_INPUT "Invalid input\n"
 #define FAILED_RUN "Failed to run program, errno = "
 #define SUCCESSFUL_RUN "Program exited, status = "
 
+static int32_t run_execErrno;
+static char run_stack[4096] hc_ALIGNED(16);
+static char *run_argv[256];
 static noreturn void run(void *arg) {
     const char **envp = arg;
-    shell_execErrno = 0;
-    shell_execErrno = -sys_execveat(AT_FDCWD, shell_argv[0], (const char *const *)&shell_argv[0], &envp[0], 0);
+    run_execErrno = 0;
+    run_execErrno = -sys_execveat(AT_FDCWD, run_argv[0], (const char *const *)&run_argv[0], &envp[0], 0);
     sys_exit_group(0);
 }
 
@@ -45,18 +45,18 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
         // Parse input.
         int32_t argsCount = 0;
         for (int64_t i = 0; i < inputSize;) {
-            if (argsCount >= (int32_t)hc_ARRAY_LEN(shell_argv) - 1) goto invalidInput;
-            shell_argv[argsCount++] = &shell_buffer[i];
+            if (argsCount >= (int32_t)hc_ARRAY_LEN(run_argv) - 1) goto invalidInput;
+            run_argv[argsCount++] = &shell_buffer[i];
             while (shell_buffer[i++] != '\0');
         }
-        shell_argv[argsCount] = NULL;
+        run_argv[argsCount] = NULL;
 
         // Run program.
         struct clone_args cloneArgs = {
             .flags = CLONE_VM | CLONE_VFORK,
             .exit_signal = SIGCHLD,
-            .stack = &shell_stack[0],
-            .stack_size = sizeof(shell_stack)
+            .stack = &run_stack[0],
+            .stack_size = sizeof(run_stack)
         };
         int32_t programPid = sys_clone3_func(&cloneArgs, sizeof(cloneArgs), run, envp);
         if (programPid < 0) return 1;
@@ -67,8 +67,8 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
 
         char *printStr;
         int64_t printStrLen;
-        if (shell_execErrno != 0) {
-            status = shell_execErrno;
+        if (run_execErrno != 0) {
+            status = run_execErrno;
             printStr = FAILED_RUN;
             printStrLen = hc_STR_LEN(FAILED_RUN);
         } else {
