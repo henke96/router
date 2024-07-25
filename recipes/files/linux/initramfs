@@ -16,12 +16,12 @@ file /init ../../init/${DEBUG_PREFIX}${ARCH}-linux_init 0755 0 0
 file /router ../../router/${DEBUG_PREFIX}${ARCH}-linux_router 0755 0 0
 file /hostapd ../../hostapd_${ARCH}/hostapd 0755 0 0
 
+file /devsetup ../../utilities/${DEBUG_PREFIX}${ARCH}-linux_devsetup 0755 0 0
 file /mount ../../utilities/${DEBUG_PREFIX}${ARCH}-linux_mount 0755 0 0
 file /shell ../../utilities/${DEBUG_PREFIX}${ARCH}-linux_shell 0755 0 0
-file /devsetup ../../utilities/${DEBUG_PREFIX}${ARCH}-linux_devsetup 0755 0 0
 file /untar ../../hc/${DEBUG_PREFIX}${ARCH}-linux_untar 0755 0 0
 
 slink /usr / 0755 0 0
 dir /bin 0755 0 0
 file /bin/env ../../utilities/${DEBUG_PREFIX}${ARCH}-linux_env 0755 0 0
-file /bin/sh ../../utilities/sh 0755 0 0
+file /bin/sh ../../utilities/${DEBUG_PREFIX}${ARCH}-linux_sh 0755 0 0
