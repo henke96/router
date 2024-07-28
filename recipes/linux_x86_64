@@ -28,7 +28,7 @@ make -j "$NUM_CPUS" $tools HOSTCC="$CC"
 mv arch/x86/boot/bzImage "$OUT/$SCRIPT_NAME/"
 
 # Build debug image.
-export DEBUG_PREFIX=debug_
+export DEBUG_PREFIX=debug/
 ./usr/gen_init_cpio -t 0 "$SCRIPT_DIR/files/linux/initramfs" > ./initramfs.cpio
 make -j "$NUM_CPUS" $tools HOSTCC="$CC"
 mv arch/x86/boot/bzImage "$OUT/$SCRIPT_NAME/debug_bzImage"

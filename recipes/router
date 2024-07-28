@@ -15,5 +15,5 @@ export FLAGS_RELEASE= FLAGS_DEBUG=
 OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../router/router.c"
 "$SCRIPT_DIR/../hc/objcopy.sh" --strip-sections "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_router"
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_router"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug_$ARCH-${ABI}_router"
+touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug/$ARCH-${ABI}_router"
 recipe_finish

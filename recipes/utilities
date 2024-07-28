@@ -16,25 +16,25 @@ export FLAGS_RELEASE= FLAGS_DEBUG=
 OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../utilities/devsetup.c"
 "$SCRIPT_DIR/../hc/objcopy.sh" --strip-sections "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_devsetup"
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_devsetup"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug_$ARCH-${ABI}_devsetup"
+touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug/$ARCH-${ABI}_devsetup"
 
 OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../utilities/env.c"
 "$SCRIPT_DIR/../hc/objcopy.sh" --strip-sections "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_env"
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_env"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug_$ARCH-${ABI}_env"
+touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug/$ARCH-${ABI}_env"
 
 OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../utilities/mount.c"
 "$SCRIPT_DIR/../hc/objcopy.sh" --strip-sections "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_mount"
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_mount"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug_$ARCH-${ABI}_mount"
+touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug/$ARCH-${ABI}_mount"
 
 OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../utilities/sh.c"
 "$SCRIPT_DIR/../hc/objcopy.sh" --strip-sections "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_sh"
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_sh"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug_$ARCH-${ABI}_sh"
+touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug/$ARCH-${ABI}_sh"
 
 OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../utilities/shell.c"
 "$SCRIPT_DIR/../hc/objcopy.sh" --strip-sections "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_shell"
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_shell"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug_$ARCH-${ABI}_shell"
+touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug/$ARCH-${ABI}_shell"
 recipe_finish
