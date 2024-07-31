@@ -28,8 +28,9 @@ sed -e '7542s/FREE (tt);/#if defined (ARRAY_VARS)\
 FREE (tt);\
 #endif/' ./subst.c > ./sed.temp
 mv ./sed.temp ./subst.c
+# TODO: Fix cross compilation problems, such as pipesize.h
 # https://savannah.gnu.org/patch/?10449
-./configure bash_cv_func_strtoimax=no bash_cv_dev_stdin=absent bash_cv_dev_fd=standard bash_cv_mail_dir= bash_cv_wexitstatus_offset=8 --prefix= --host=$arch-unknown-linux-musl --enable-minimal-config --enable-strict-posix-default --enable-static-link --disable-nls --disable-threads --disable-rpath --without-bash-malloc --without-libpth-prefix --without-libiconv-prefix --without-libintl-prefix
+./configure bash_cv_func_strtoimax=no bash_cv_dev_stdin=absent bash_cv_dev_fd=standard bash_cv_mail_dir= bash_cv_wexitstatus_offset=8 --prefix= --host=$arch-unknown-linux-musl --enable-minimal-config --enable-job-control --enable-strict-posix-default --enable-static-link --disable-nls --disable-threads --disable-rpath --without-bash-malloc --without-libpth-prefix --without-libiconv-prefix --without-libintl-prefix
 make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME"
 llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/bash"
 touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/bin/bash"

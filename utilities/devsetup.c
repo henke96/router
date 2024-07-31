@@ -40,25 +40,31 @@ int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
         .stack = &run_stack[0],
         .stack_size = sizeof(run_stack)
     };
-
-    // Extract devtools.tar and source.tar
     static_assert(sizeof(devsetup_buffer) > MAX_DEVTOOLS_PATH_LEN + hc_STR_LEN("/devtools.tar\0"), "Buffer too small");
-    hc_MEMCPY(&devsetup_buffer[0], devtoolsPath, (uint64_t)devtoolsPathLen);
-    hc_MEMCPY(&devsetup_buffer[devtoolsPathLen], hc_STR_COMMA_LEN("/devtools.tar\0"));
-    struct run_args devtoolsArgs = {
-        .argv = &((const char *[]) { "untar", &devsetup_buffer[0], NULL })[0],
-        .envp = &((const char *[]) { NULL })[0]
-    };
-    int32_t devtoolsPid = sys_clone3_func(&cloneArgs, sizeof(cloneArgs), run, &devtoolsArgs);
-    if (devtoolsPid < 0 || run_execErrno != 0) return 1;
 
-    hc_MEMCPY(&devsetup_buffer[devtoolsPathLen], hc_STR_COMMA_LEN("/source.tar\0"));
-    struct run_args sourceArgs = {
-        .argv = &((const char *[]) { "untar", &devsetup_buffer[0], NULL })[0],
-        .envp = &((const char *[]) { NULL })[0]
-    };
-    int32_t sourcePid = sys_clone3_func(&cloneArgs, sizeof(cloneArgs), run, &sourceArgs);
-    if (sourcePid < 0 || run_execErrno != 0) return 1;
+    // Extract devtools.tar and source.tar, if not already extracted.
+    int32_t devtoolsPid = -1;
+    if (sys_faccessat(AT_FDCWD, "devtools", 0) != 0) {
+        hc_MEMCPY(&devsetup_buffer[0], devtoolsPath, (uint64_t)devtoolsPathLen);
+        hc_MEMCPY(&devsetup_buffer[devtoolsPathLen], hc_STR_COMMA_LEN("/devtools.tar\0"));
+        struct run_args devtoolsArgs = {
+            .argv = &((const char *[]) { "untar", &devsetup_buffer[0], NULL })[0],
+            .envp = &((const char *[]) { NULL })[0]
+        };
+        devtoolsPid = sys_clone3_func(&cloneArgs, sizeof(cloneArgs), run, &devtoolsArgs);
+        if (devtoolsPid < 0 || run_execErrno != 0) return 1;
+    }
+
+    int32_t sourcePid = -1;
+    if (sys_faccessat(AT_FDCWD, "source", 0) != 0) {
+        hc_MEMCPY(&devsetup_buffer[devtoolsPathLen], hc_STR_COMMA_LEN("/source.tar\0"));
+        struct run_args sourceArgs = {
+            .argv = &((const char *[]) { "untar", &devsetup_buffer[0], NULL })[0],
+            .envp = &((const char *[]) { NULL })[0]
+        };
+        sourcePid = sys_clone3_func(&cloneArgs, sizeof(cloneArgs), run, &sourceArgs);
+        if (sourcePid < 0 || run_execErrno != 0) return 1;
+    }
 
     while (devtoolsPid >= 0 || sourcePid >= 0) {
         int32_t status = 0;
@@ -70,7 +76,10 @@ int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
         else return 1;
     }
 
-    // Run /devtools/bin/sh
+    // Start devtools/bin/sh
+    if (sys_setsid() < 0) return 1;
+    if (sys_ioctl(0, TIOCSCTTY, 0) < 0) return 1;
+
     static_assert(
         sizeof(devsetup_buffer) > (
             hc_STR_LEN("DOWNLOADS=") + PATH_MAX +
