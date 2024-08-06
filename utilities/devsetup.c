@@ -9,7 +9,7 @@
 #include "hc/linux/helpers/_start.c"
 #include "hc/linux/helpers/sys_clone3_func.c"
 
-static char devsetup_buffer[65536] hc_ALIGNED(16);
+static char buffer[65536] hc_ALIGNED(16);
 
 struct run_args {
     const char **argv;
@@ -40,15 +40,15 @@ int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
         .stack = &run_stack[0],
         .stack_size = sizeof(run_stack)
     };
-    static_assert(sizeof(devsetup_buffer) > MAX_DEVTOOLS_PATH_LEN + hc_STR_LEN("/devtools.tar\0"), "Buffer too small");
+    static_assert(sizeof(buffer) > MAX_DEVTOOLS_PATH_LEN + hc_STR_LEN("/devtools.tar\0"), "Buffer too small");
 
     // Extract devtools.tar and source.tar, if not already extracted.
     int32_t devtoolsPid = -1;
     if (sys_faccessat(AT_FDCWD, "devtools", 0) != 0) {
-        hc_MEMCPY(&devsetup_buffer[0], devtoolsPath, (uint64_t)devtoolsPathLen);
-        hc_MEMCPY(&devsetup_buffer[devtoolsPathLen], hc_STR_COMMA_LEN("/devtools.tar\0"));
+        hc_MEMCPY(&buffer[0], devtoolsPath, (uint64_t)devtoolsPathLen);
+        hc_MEMCPY(&buffer[devtoolsPathLen], hc_STR_COMMA_LEN("/devtools.tar\0"));
         struct run_args devtoolsArgs = {
-            .argv = &((const char *[]) { "untar", &devsetup_buffer[0], NULL })[0],
+            .argv = &((const char *[]) { "untar", &buffer[0], NULL })[0],
             .envp = &((const char *[]) { NULL })[0]
         };
         devtoolsPid = sys_clone3_func(&cloneArgs, sizeof(cloneArgs), run, &devtoolsArgs);
@@ -57,9 +57,9 @@ int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
 
     int32_t sourcePid = -1;
     if (sys_faccessat(AT_FDCWD, "source", 0) != 0) {
-        hc_MEMCPY(&devsetup_buffer[devtoolsPathLen], hc_STR_COMMA_LEN("/source.tar\0"));
+        hc_MEMCPY(&buffer[devtoolsPathLen], hc_STR_COMMA_LEN("/source.tar\0"));
         struct run_args sourceArgs = {
-            .argv = &((const char *[]) { "untar", &devsetup_buffer[0], NULL })[0],
+            .argv = &((const char *[]) { "untar", &buffer[0], NULL })[0],
             .envp = &((const char *[]) { NULL })[0]
         };
         sourcePid = sys_clone3_func(&cloneArgs, sizeof(cloneArgs), run, &sourceArgs);
@@ -81,13 +81,13 @@ int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
     if (sys_ioctl(0, TIOCSCTTY, 0) < 0) return 1;
 
     static_assert(
-        sizeof(devsetup_buffer) > (
+        sizeof(buffer) > (
             hc_STR_LEN("DOWNLOADS=") + PATH_MAX +
             hc_STR_LEN("NUM_CPUS=") + util_UINT64_MAX_CHARS + hc_STR_LEN("\0")
         ),
         "Buffer too small"
     );
-    char *pos = &devsetup_buffer[sizeof(devsetup_buffer)];
+    char *pos = &buffer[sizeof(buffer)];
     pos = hc_MEMCPY(pos - hc_STR_LEN("/downloads\0"), hc_STR_COMMA_LEN("/downloads\0"));
     pos = hc_MEMCPY(pos - devtoolsPathLen, devtoolsPath, (uint64_t)devtoolsPathLen);
     pos = hc_MEMCPY(pos - hc_STR_LEN("DOWNLOADS="), hc_STR_COMMA_LEN("DOWNLOADS="));

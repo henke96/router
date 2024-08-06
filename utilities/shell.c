@@ -13,7 +13,7 @@
 #define ix_ERRNO(RET) (-RET)
 #include "hc/ix/util.c"
 
-static char shell_buffer[65536] hc_ALIGNED(16);
+static char buffer[65536] hc_ALIGNED(16);
 
 #define PROMPT "Shell usage: program^@arg1^@arg2^D^D or ^D to exit\n"
 #define INVALID_INPUT "Invalid input\n"
@@ -34,20 +34,20 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
     for (;;) {
         // Promt user and read input.
         if (sys_write(1, hc_STR_COMMA_LEN(PROMPT)) != hc_STR_LEN(PROMPT)) return 1;
-        int64_t inputSize = util_readAll(0, &shell_buffer[0], sizeof(shell_buffer));
+        int64_t inputSize = util_readAll(0, &buffer[0], sizeof(buffer));
         if (inputSize <= 0) {
             return inputSize < 0;
         }
         if (sys_write(1, hc_STR_COMMA_LEN("\n")) != hc_STR_LEN("\n")) return 1;
-        if (inputSize == sizeof(shell_buffer)) goto invalidInput;
-        shell_buffer[inputSize++] = '\0';
+        if (inputSize == sizeof(buffer)) goto invalidInput;
+        buffer[inputSize++] = '\0';
 
         // Parse input.
         int32_t argsCount = 0;
         for (int64_t i = 0; i < inputSize;) {
             if (argsCount >= (int32_t)hc_ARRAY_LEN(run_argv) - 1) goto invalidInput;
-            run_argv[argsCount++] = &shell_buffer[i];
-            while (shell_buffer[i++] != '\0');
+            run_argv[argsCount++] = &buffer[i];
+            while (buffer[i++] != '\0');
         }
         run_argv[argsCount] = NULL;
 
@@ -81,8 +81,8 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
             printStr = SUCCESSFUL_RUN;
             printStrLen = hc_STR_LEN(SUCCESSFUL_RUN);
         }
-        char *statusStr = util_intToStr(&shell_buffer[sizeof(shell_buffer)], status);
-        int64_t statusStrLen = (int64_t)(&shell_buffer[sizeof(shell_buffer)] - statusStr);
+        char *statusStr = util_intToStr(&buffer[sizeof(buffer)], status);
+        int64_t statusStrLen = (int64_t)(&buffer[sizeof(buffer)] - statusStr);
         struct iovec_const print[] = {
             { printStr, printStrLen },
             { statusStr, statusStrLen },
