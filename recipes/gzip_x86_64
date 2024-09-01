@@ -22,7 +22,6 @@ export LDFLAGS="-target $arch-unknown-linux-musl --sysroot $OUT/musl_$arch -stat
 make -j "$NUM_CPUS" all64
 mv ./minigzip64 "$OUT/$SCRIPT_NAME/gzip"
 llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/gzip"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/gzip"
 
 rm -rf "$PWD"
 recipe_finish

@@ -27,8 +27,6 @@ chmod +x ./configure
 make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME"
 llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/find"
 llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/xargs"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/bin/find"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/bin/xargs"
 
 rm -rf "$PWD"
 recipe_finish

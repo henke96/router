@@ -11,5 +11,4 @@ DEPENDENCIES="xz"
 recipe_start
 "$OUT/xz/bin/xz" -d -c "$(recipe_download "$url_wireless_regdb" "$sha512")" | tar xf - "wireless-regdb-2023.09.01/regulatory.db"
 mv ./wireless-regdb-2023.09.01 bin
-touch -t 197001010000.00 ./bin/regulatory.db
 recipe_finish

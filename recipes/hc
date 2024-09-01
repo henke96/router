@@ -9,13 +9,4 @@ DIR_DEPENDENCIES="../hc"
 recipe_start
 export LLVM="$OUT/llvm"
 OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/tar/hostbuild.sh"
-
-export ARCH=x86_64
-export ABI=linux
-export FLAGS="-Werror -Os"
-export FLAGS_RELEASE= FLAGS_DEBUG=
-OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../hc/tools/untar/linux/untar.c"
-"$SCRIPT_DIR/../hc/objcopy.sh" --strip-sections "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_untar"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_untar"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/debug_$ARCH-${ABI}_untar"
 recipe_finish

@@ -45,10 +45,6 @@ add_nic 6
 add_nic 7
 add_nic 8
 
-dd if=/dev/zero of="$OUT/disk1.img" bs=1048576 count=1000
-mformat -i "$OUT/disk1.img" -F -N 0 -v DISK1 ::
-mcopy -i "$OUT/disk1.img" -s "$OUT/out/"* ::/
-
 test -f "$OUT/disk2.img" || dd if=/dev/zero of="$OUT/disk2.img" bs=1048576 count=10000
 
 qemu-system-x86_64 \
@@ -58,6 +54,9 @@ qemu-system-x86_64 \
 -device usb-kbd \
 -smp "$NUM_CPUS" \
 -m "${NUM_CPUS}G" \
--drive format=raw,file=$OUT/disk1.img \
+-enable-kvm $qemu_args \
 -drive format=raw,file=$OUT/disk2.img \
--enable-kvm $qemu_args
+-cdrom $OUT/iso_x86_64/router.iso \
+-drive if=none,id=stick,format=raw,readonly=on,file=$OUT/iso_x86_64/router.iso \
+-device nec-usb-xhci,id=xhci \
+-device usb-storage,bus=xhci.0,drive=stick \

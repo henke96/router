@@ -1,12 +1,12 @@
 #!/bin/sh --
 set -ex
 SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
-. "$SCRIPT_DIR/../hc/src/shell/recipe.sh"
+. "$SCRIPT_DIR/../../hc/src/shell/recipe.sh"
 
-. "$SCRIPT_DIR/files/urls"
+. "$SCRIPT_DIR/../files/urls"
 sha512="2ac51f7654a44adf3ee5a5e32cecd7f129e423bdf3074c60b22a7acdba131e7dd0bb2964c107a06ae133f51836272be166f5da1f996f67ceb6c22e2636117beb"
 
-DEPENDENCIES="../recipes/make ../recipes/xz"
+DEPENDENCIES="../make ../xz"
 
 recipe_start
 export PATH="$OUT/make/bin:$OUT/xz/bin:$PATH"

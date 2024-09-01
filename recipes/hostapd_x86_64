@@ -21,7 +21,7 @@ export CFLAGS="-target $arch-unknown-linux-musl --sysroot $OUT/musl_$arch -Os -f
 export LDFLAGS="-target $arch-unknown-linux-musl --sysroot $OUT/musl_$arch -L$OUT/libnl3_x86_64/lib -static -Wl,--gc-sections"
 make -C hostapd -j "$NUM_CPUS" install BINDIR= DESTDIR="$OUT/$SCRIPT_NAME" LIBNL_INC="$OUT/libnl3_x86_64/include/libnl3"
 llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/hostapd"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/hostapd"
+touch -t 197001010000 "$OUT/$SCRIPT_NAME/hostapd"
 
 rm -rf "$PWD"
 recipe_finish

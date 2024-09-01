@@ -68,7 +68,7 @@ setup_coreutils_wrappers() {
         echo 'exec "$sysroot/bin/coreutils" --coreutils-prog="'$prog'" "$@"' >> "bin/$prog"
     done
 }
-setup_coreutils_wrappers basename cat chmod comm cp cut date dirname env expr head ln ls mkdir mv nl rm rmdir sha512sum sleep sort tail tee touch tr uname uniq wc
+setup_coreutils_wrappers basename cat chmod comm cp cut date dd dirname env expr head ln ls mkdir mv nl rm rmdir sha512sum sleep sort tail tee touch tr uname uniq wc
 cp bin/cc bin/install
 echo 'exec "$sysroot/bin/coreutils" --coreutils-prog=ginstall "$@"' >> bin/install
 echo 'exec "$sysroot/bin/clang" -Wno-unused-command-line-argument -Wl,-dynamic-linker="$sysroot/lib/libc.so" "$@"' >> bin/cc
@@ -77,20 +77,4 @@ echo 'exec "$sysroot/bin/clang" --driver-mode=cpp "$@"' >> bin/cpp
 echo 'exec "$sysroot/bin/ld.lld" "$@"' >> bin/ld
 echo 'exec "$sysroot/lib/libc.so" --list "$@"' >> bin/ldd
 
-"$OUT/hc/tar" \
--o devtools.tar \
--d devtools -p devtools \
--d bin -d lib -d include \
--p devtools/bin \
--a ./bin \
--p devtools/lib \
--a "$OUT/llvm/lib" \
--a "$OUT/llvm_x86_64/lib" \
--a ./lib \
--p devtools/include \
--a "$OUT/llvm_x86_64/include" \
--a "$OUT/musl_x86_64/include"
-
-
-rm -rf ./bin
 recipe_finish

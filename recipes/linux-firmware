@@ -11,5 +11,5 @@ DEPENDENCIES="xz"
 recipe_start
 "$OUT/xz/bin/xz" -d -c "$(recipe_download "$url_linux_firmware" "$sha512")" | tar xf - "linux-firmware-20230625/iwlwifi-cc-a0-77.ucode"
 mv ./linux-firmware-20230625 bin
-touch -t 197001010000.00 ./bin/iwlwifi-cc-a0-77.ucode
+touch -t 197001010000 ./bin/iwlwifi-cc-a0-77.ucode
 recipe_finish

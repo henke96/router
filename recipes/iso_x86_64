@@ -1,0 +1,22 @@
+#!/bin/sh --
+set -ex
+SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
+. "$SCRIPT_DIR/../hc/src/shell/recipe.sh"
+
+DEPENDENCIES="xorriso img_x86_64 devtools_x86_64 source downloads"
+
+recipe_start
+export PATH="$OUT/xorriso/bin:$PATH"
+
+xorriso -as mkisofs -V ROUTER -o router.iso -J --norock -append_partition 2 0xef "$OUT/img_x86_64/efi.img" -e --interval:appended_partition_2:all:: -no-emul-boot --boot-catalog-hide -partition_offset 16 -no-pad -graft-points \
+"downloads=$OUT/downloads/out/" \
+"source.tar=$OUT/source/source.tar" \
+"bin=$OUT/devtools_x86_64/bin" \
+"lib=$OUT/devtools_x86_64/lib" \
+"lib=$OUT/llvm/lib" \
+"lib=$OUT/llvm_x86_64/lib" \
+"include=$OUT/llvm_x86_64/include" \
+"include=$OUT/musl_x86_64/include" \
+-- -alter_date_r b =0 / --
+
+recipe_finish

@@ -26,7 +26,6 @@ chmod +x ./configure
 
 make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME"
 llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/sed"
-touch -t 197001010000.00 "$OUT/$SCRIPT_NAME/bin/sed"
 
 rm -rf "$PWD"
 recipe_finish

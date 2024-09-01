@@ -13,7 +13,7 @@ export PATH="$OUT/make/bin:$OUT/xz/bin:$PATH"
 xz -d -c "$(recipe_download "$url_python" "$sha512")" | tar xf -
 cd ./Python-3.11.4
 
-./configure --prefix="$OUT/$SCRIPT_NAME" --without-ensurepip
+./configure --prefix="$OUT/$SCRIPT_NAME" --without-ensurepip --disable-test-modules
 make -j "$NUM_CPUS" install
 
 rm -rf "$PWD"

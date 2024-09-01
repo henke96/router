@@ -3,36 +3,16 @@ set -e
 script_dir="$(cd -- "${0%/*}/" && pwd)"
 OUT="$(cd -- "$OUT" && pwd)"
 
-for pkg in bash e2fsprogs ncurses nano; do
-    "$script_dir/recipesExtra/$pkg"
-    if test -d "$OUT/$pkg/bin"; then
-        export PATH="$OUT/$pkg/bin:$PATH"
-    fi
-    if test -d "$OUT/$pkg/sbin"; then
-        export PATH="$OUT/$pkg/sbin:$PATH"
-    fi
+for pkg in bash e2fsprogs nano ncurses; do
+    "$script_dir/recipes/extra/$pkg"
+    ! test -d "$OUT/$pkg/bin" || export PATH="$OUT/$pkg/bin:$PATH"
+    ! test -d "$OUT/$pkg/sbin" || export PATH="$OUT/$pkg/sbin:$PATH"
 done
 
-for pkg in make xz; do
+for pkg in bc bison bzip2 cmake elfutils flex m4 make mtools perl python xorriso xz; do
     "$script_dir/recipes/$pkg"
-    if test -d "$OUT/$pkg/bin"; then
-        export PATH="$OUT/$pkg/bin:$PATH"
-    fi
-    if test -d "$OUT/$pkg/sbin"; then
-        export PATH="$OUT/$pkg/sbin:$PATH"
-    fi
+    ! test -d "$OUT/$pkg/bin" || export PATH="$OUT/$pkg/bin:$PATH"
+    ! test -d "$OUT/$pkg/sbin" || export PATH="$OUT/$pkg/sbin:$PATH"
 done
-
-if test -n "$EXTRA_ALL"; then
-    for pkg in bc bison bzip2 cmake flex llvm m4 perl python; do
-        "$script_dir/recipes/$pkg"
-        if test -d "$OUT/$pkg/bin"; then
-            export PATH="$OUT/$pkg/bin:$PATH"
-        fi
-        if test -d "$OUT/$pkg/sbin"; then
-            export PATH="$OUT/$pkg/sbin:$PATH"
-        fi
-    done
-fi
 
 exec "$OUT/bash/bin/bash" --rcfile "$OUT/bash/bashrc"
