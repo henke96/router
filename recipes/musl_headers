@@ -14,7 +14,7 @@ gzip -d -c "$(recipe_download "$url_musl" "$sha512")" | tar xf -
 cd ./musl-1.2.4
 
 arch=x86_64
-make install-headers ARCH="$arch" prefix= DESTDIR="$OUT/$SCRIPT_NAME/$arch"
+make install-headers ARCH="$arch" prefix= DESTDIR="$OUT/$SCRIPT_NAME/$arch" >/dev/null
 
 rm -rf "$PWD"
 recipe_finish

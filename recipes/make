@@ -10,8 +10,8 @@ recipe_start
 gzip -d -c "$(recipe_download "$url_make" "$sha512")" | tar xf -
 cd ./make-4.4
 
-./configure --prefix="$OUT/$SCRIPT_NAME" --disable-dependency-tracking --without-libiconv-prefix --without-libintl-prefix --without-guile --without-customs --without-dmalloc --disable-nls
-./build.sh
+./configure --prefix="$OUT/$SCRIPT_NAME" --disable-dependency-tracking --without-libiconv-prefix --without-libintl-prefix --without-guile --without-customs --without-dmalloc --disable-nls >/dev/null
+./build.sh >/dev/null
 mkdir "$OUT/$SCRIPT_NAME/bin"
 mv ./make "$OUT/$SCRIPT_NAME/bin/"
 

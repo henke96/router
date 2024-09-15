@@ -22,9 +22,9 @@ export LDFLAGS="-target $arch-unknown-linux-musl --sysroot $OUT/musl_$arch -stat
 sed -e 's/cross_compiling=maybe/cross_compiling=yes/' ./configure > ./sed.temp
 mv ./sed.temp ./configure
 chmod +x ./configure
-./configure --prefix= --host=$arch-unknown-linux-musl --disable-dependency-tracking --disable-threads --disable-assert --disable-nls --disable-rpath --without-selinux --without-libiconv-prefix
+./configure --prefix= --host=$arch-unknown-linux-musl --disable-dependency-tracking --disable-threads --disable-assert --disable-nls --disable-rpath --without-selinux --without-libiconv-prefix >/dev/null
 
-make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME"
+make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME" >/dev/null
 llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/find"
 llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/xargs"
 

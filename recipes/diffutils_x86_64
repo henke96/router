@@ -22,9 +22,9 @@ export LDFLAGS="-target $arch-unknown-linux-musl --sysroot $OUT/musl_$arch -stat
 sed -e 's/cross_compiling=maybe/cross_compiling=yes/' ./configure > ./sed.temp
 mv ./sed.temp ./configure
 chmod +x ./configure
-./configure ac_cv_path_PR_PROGRAM="" --prefix= --host=$arch-unknown-linux-musl --disable-dependency-tracking --disable-threads --disable-rpath --disable-nls --without-libsigsegv-prefix --without-libiconv-prefix --without-libintl-prefix
+./configure ac_cv_path_PR_PROGRAM="" --prefix= --host=$arch-unknown-linux-musl --disable-dependency-tracking --disable-threads --disable-rpath --disable-nls --without-libsigsegv-prefix --without-libiconv-prefix --without-libintl-prefix >/dev/null
 
-make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME"
+make -j "$NUM_CPUS" install DESTDIR="$OUT/$SCRIPT_NAME" >/dev/null
 llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/diff"
 llvm-objcopy --strip-sections "$OUT/$SCRIPT_NAME/bin/cmp"
 

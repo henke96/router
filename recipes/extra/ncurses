@@ -13,8 +13,8 @@ export PATH="$OUT/make/bin:$PATH"
 gzip -d -c "$(recipe_download "$url_ncurses" "$sha512")" | tar xf -
 cd ./ncurses-6.5
 
-./configure --prefix="$OUT/$SCRIPT_NAME" --disable-widec --enable-overwrite --disable-stripping
-make -j "$NUM_CPUS" install
+./configure --prefix="$OUT/$SCRIPT_NAME" --without-debug --enable-overwrite --disable-widec --disable-stripping >/dev/null
+make -j "$NUM_CPUS" install >/dev/null
 
 rm -rf "$PWD"
 recipe_finish

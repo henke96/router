@@ -19,11 +19,11 @@ export HOSTCFLAGS="-I$OUT/elfutils/include" HOSTLDFLAGS="-Wl,-rpath,$OUT/elfutil
 tools="CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump READELF=llvm-readelf PAHOLE=false"
 cp "$SCRIPT_DIR/files/linux/.config" .
 
-make -j "$NUM_CPUS" -C ./usr gen_init_cpio CC="$CC"
+make -j "$NUM_CPUS" -C ./usr gen_init_cpio CC="$CC" >/dev/null
 
 export DEBUG_PREFIX=
 ./usr/gen_init_cpio -t 0 "$SCRIPT_DIR/files/linux/initramfs" > ./initramfs.cpio
-make -j "$NUM_CPUS" $tools HOSTCC="$CC"
+make -j "$NUM_CPUS" $tools HOSTCC="$CC" >/dev/null
 mv arch/x86/boot/bzImage "$OUT/$SCRIPT_NAME/bootx64.efi"
 
 rm -rf "$PWD"

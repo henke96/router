@@ -13,7 +13,7 @@ export PATH="$OUT/make/bin:$PATH"
 gzip -d -c "$(recipe_download "$url_xorriso" "$sha512")" | tar xf -
 cd ./xorriso-1.5.6
 
-# Make output reproducible. TODO link upstream patch
+# Make output reproducible. Upstreamed: https://lists.gnu.org/archive/html/bug-xorriso/2024-08/msg00000.html
 sed -e 's/isoburn_igopt_set_sort_files(sopts, 1);/isoburn_igopt_set_sort_files(sopts, 0);/' ./xorriso/write_run.c > ./sed.temp
 mv ./sed.temp ./xorriso/write_run.c
 
@@ -33,8 +33,8 @@ mv ./sed.temp ./libisofs/ecma119_tree.c
 sed -e 's/  cmp_node_name);/cmp_node_name_tiebreak);/' ./libisofs/ecma119_tree.c > ./sed.temp
 mv ./sed.temp ./libisofs/ecma119_tree.c
 
-./configure --prefix="$OUT/$SCRIPT_NAME" --disable-dependency-tracking --enable-shared=no --enable-static=no --disable-debug --disable-libreadline --disable-libedit --disable-libacl --disable-xattr --disable-zlib --disable-libbz2 --disable-external-filters --disable-launch-frontend
-make -j "$NUM_CPUS" install
+./configure --prefix="$OUT/$SCRIPT_NAME" --disable-dependency-tracking --enable-shared=no --enable-static=no --disable-debug --disable-libreadline --disable-libedit --disable-libacl --disable-xattr --disable-zlib --disable-libbz2 --disable-external-filters --disable-launch-frontend >/dev/null
+make -j "$NUM_CPUS" install >/dev/null
 
 rm -rf "$PWD"
 recipe_finish
