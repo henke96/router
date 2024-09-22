@@ -41,7 +41,7 @@ static noreturn void run(void *program) {
 }
 
 int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **envp) {
-    bool cleanExit = false;
+    uint32_t rebootCmd = LINUX_REBOOT_CMD_HALT;
     int32_t status = initialise();
     if (status < 0) {
         debug_printNum("Failed to initialise (", status, ")\n");
@@ -84,14 +84,14 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
         };
         sys_writev(1, &iov[0], hc_ARRAY_LEN(iov));
 
-        if (pid == routerPid || pid == shellPid) {
-            if (status == 0) cleanExit = true;
+        if (pid == routerPid) {
+            if (status == 0) rebootCmd = LINUX_REBOOT_CMD_POWER_OFF;
             goto halt;
         }
     }
 
     halt:
     sys_sync();
-    sys_reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, cleanExit ? LINUX_REBOOT_CMD_POWER_OFF : LINUX_REBOOT_CMD_HALT, NULL);
+    sys_reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, rebootCmd, NULL);
     return 0;
 }

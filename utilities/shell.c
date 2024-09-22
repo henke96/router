@@ -15,7 +15,7 @@
 
 static char buffer[65536] hc_ALIGNED(16);
 
-#define PROMPT "Shell usage: program^@arg1^@arg2^D^D or ^D to exit\n"
+#define PROMPT "Shell usage: program^@arg1^@arg2^D^D\n"
 #define INVALID_INPUT "Invalid input\n"
 #define FAILED_RUN "Failed to run program, errno = "
 #define SUCCESSFUL_RUN "Program exited, status = "
@@ -35,9 +35,8 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
         // Promt user and read input.
         if (sys_write(1, hc_STR_COMMA_LEN(PROMPT)) != hc_STR_LEN(PROMPT)) return 1;
         int64_t inputSize = util_readAll(0, &buffer[0], sizeof(buffer));
-        if (inputSize <= 0) {
-            return inputSize < 0;
-        }
+        if (inputSize < 0) return 1;
+
         if (sys_write(1, hc_STR_COMMA_LEN("\n")) != hc_STR_LEN("\n")) return 1;
         if (inputSize == sizeof(buffer)) goto invalidInput;
         buffer[inputSize++] = '\0';
