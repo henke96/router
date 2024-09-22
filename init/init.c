@@ -82,7 +82,7 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
             { maxRssStr, (int64_t)(&buffer[MAXRSS_END] - maxRssStr) },
             { hc_STR_COMMA_LEN(")\n") }
         };
-        sys_writev(1, &iov[0], hc_ARRAY_LEN(iov));
+        sys_writev(2, &iov[0], hc_ARRAY_LEN(iov));
 
         if (pid == routerPid) {
             if (status == 0) rebootCmd = LINUX_REBOOT_CMD_POWER_OFF;

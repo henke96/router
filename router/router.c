@@ -114,5 +114,6 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, hc_UNUSED char **en
     ksmb_deinit();
     acpi_deinit();
     genetlink_deinit();
+    disk_unmount();
     return 0;
 }

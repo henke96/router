@@ -33,11 +33,11 @@ static noreturn void run(void *arg) {
 int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
     for (;;) {
         // Promt user and read input.
-        if (sys_write(1, hc_STR_COMMA_LEN(PROMPT)) != hc_STR_LEN(PROMPT)) return 1;
+        if (sys_write(2, hc_STR_COMMA_LEN(PROMPT)) != hc_STR_LEN(PROMPT)) return 1;
         int64_t inputSize = util_readAll(0, &buffer[0], sizeof(buffer));
         if (inputSize < 0) return 1;
 
-        if (sys_write(1, hc_STR_COMMA_LEN("\n")) != hc_STR_LEN("\n")) return 1;
+        if (sys_write(2, hc_STR_COMMA_LEN("\n")) != hc_STR_LEN("\n")) return 1;
         if (inputSize == sizeof(buffer)) goto invalidInput;
         buffer[inputSize++] = '\0';
 
@@ -87,10 +87,10 @@ int32_t start(hc_UNUSED int32_t argc, hc_UNUSED char **argv, char **envp) {
             { statusStr, statusStrLen },
             { hc_STR_COMMA_LEN("\n") }
         };
-        if (sys_writev(1, &print[0], hc_ARRAY_LEN(print)) != printStrLen + statusStrLen + (int64_t)hc_STR_LEN("\n")) return 1;
+        if (sys_writev(2, &print[0], hc_ARRAY_LEN(print)) != printStrLen + statusStrLen + (int64_t)hc_STR_LEN("\n")) return 1;
         continue;
 
         invalidInput:
-        if (sys_write(1, hc_STR_COMMA_LEN(INVALID_INPUT)) != hc_STR_LEN(INVALID_INPUT)) return 1;
+        if (sys_write(2, hc_STR_COMMA_LEN(INVALID_INPUT)) != hc_STR_LEN(INVALID_INPUT)) return 1;
     }
 }

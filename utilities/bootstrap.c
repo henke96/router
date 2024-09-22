@@ -10,7 +10,7 @@
 
 int32_t start(int32_t argc, char **argv, hc_UNUSED char **envp) {
     if (argc != 2) {
-        sys_write(1, hc_STR_COMMA_LEN("Usage: bootstrap DEVICE|DIRECTORY\n"));
+        sys_write(2, hc_STR_COMMA_LEN("Usage: bootstrap DEVICE|DIRECTORY\n"));
         return 1;
     }
 

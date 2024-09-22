@@ -39,7 +39,7 @@ static bool _disk_findAndMount(int32_t devFd, int32_t sysClassBlockFd) {
                 { name, nameLen },
                 { hc_STR_COMMA_LEN("\n") }
             };
-            int64_t written = sys_writev(1, &print[0], hc_ARRAY_LEN(print));
+            int64_t written = sys_writev(2, &print[0], hc_ARRAY_LEN(print));
             CHECK(written, RES == (int64_t)hc_STR_LEN(disk_MOUNT_STR) + nameLen + (int64_t)hc_STR_LEN("\n"));
             return true;
         }
@@ -62,4 +62,14 @@ static void disk_mount(void) {
 
     debug_CHECK(sys_close(devFd), RES == 0);
     debug_CHECK(sys_close(sysClassBlockFd), RES == 0);
+}
+
+static void disk_unmount(void) {
+    for (;;) {
+        int32_t status = sys_umount2("/disk", 0);
+        if (status == 0) break;
+        debug_printNum("Failed to unmount /disk (", status, ")\n");
+        struct timespec sleep = { .tv_sec = 1 };
+        CHECK(sys_clock_nanosleep(CLOCK_MONOTONIC, 0, &sleep, NULL), RES == 0);
+    }
 }
