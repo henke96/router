@@ -13,7 +13,7 @@ export ABI=linux
 export FLAGS="-Werror -Os"
 export FLAGS_RELEASE= FLAGS_DEBUG=
 
-for utility in bootstrap env sh shell; do
+for utility in bootstrap clangCompilerWrapper clangWrapper coreutilsWrapper env libcSoWrapper lldWrapper sh shWrapper shell; do
     OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/builder.sh" "$SCRIPT_DIR/../utilities/$utility.c"
     "$SCRIPT_DIR/../hc/objcopy.sh" --strip-sections "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_$utility"
     touch -t 197001010000 "$OUT/$SCRIPT_NAME/$ARCH-${ABI}_$utility"

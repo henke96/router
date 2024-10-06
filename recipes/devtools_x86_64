@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd -- "${0%/*}/" && pwd)"
 
 . "$SCRIPT_DIR/files/urls"
 
-DEPENDENCIES="hc llvm_x86_64 musl_x86_64 coreutils_x86_64 bash_x86_64 gzip_x86_64 tar_x86_64 sed_x86_64 diffutils_x86_64 findutils_x86_64 grep_x86_64 mawk_x86_64"
+DEPENDENCIES="hc llvm_x86_64 musl_x86_64 coreutils_x86_64 bash_x86_64 gzip_x86_64 tar_x86_64 sed_x86_64 diffutils_x86_64 findutils_x86_64 grep_x86_64 mawk_x86_64 utilities_x86_64"
 
 recipe_start
 mkdir bin
@@ -34,47 +34,41 @@ cp "$OUT/musl_x86_64/lib/libm.a" lib/
 cp "$OUT/musl_x86_64/lib/libpthread.a" lib/
 cp "$OUT/musl_x86_64/lib/librt.a" lib/
 
-echo '#!/bin/sh --' > bin/true
-echo '#!/bin/sh --
-echo "$@"' > bin/echo
-echo '#!/bin/sh --
-printf "$@"' > bin/printf
-echo '#!/bin/sh --
-test "$@"' > bin/test
-cat > bin/cc <<"end"
-#!/bin/sh --
-case "$0" in
-    */*)
-    script_dir="${0%/*}"
-    ;;
-    *)
-    IFS=:
-    for script_dir in $PATH; do
-        test -f "$script_dir/$0" && break
-    done
-    unset IFS
-    ;;
-esac
-sysroot="$(cd -- "$script_dir/.." && pwd)"
-end
-cp bin/cc bin/c++
-cp bin/cc bin/cpp
-cp bin/cc bin/ld
-cp bin/cc bin/ldd
-setup_coreutils_wrappers() {
+setup_sh_wrappers() {
     for prog in "$@"; do
-        cp bin/cc "bin/$prog"
-
-        echo 'exec "$sysroot/bin/coreutils" --coreutils-prog="'$prog'" "$@"' >> "bin/$prog"
+        cp "$OUT/utilities_x86_64/x86_64-linux_shWrapper" "bin/$prog"
     done
 }
-setup_coreutils_wrappers basename cat chmod comm cp cut date dd dirname env expr head ln ls mkdir mv nl rm rmdir sha512sum sleep sort tail tee touch tr uname uniq wc
-cp bin/cc bin/install
-echo 'exec "$sysroot/bin/coreutils" --coreutils-prog=ginstall "$@"' >> bin/install
-echo 'exec "$sysroot/bin/clang" -Wno-unused-command-line-argument -Wl,-dynamic-linker="$sysroot/lib/libc.so" "$@"' >> bin/cc
-echo 'exec "$sysroot/bin/clang" --driver-mode=g++ -Wno-unused-command-line-argument -Wl,-dynamic-linker="$sysroot/lib/libc.so" "$@"' >> bin/c++
-echo 'exec "$sysroot/bin/clang" --driver-mode=cpp "$@"' >> bin/cpp
-echo 'exec "$sysroot/bin/ld.lld" "$@"' >> bin/ld
-echo 'exec "$sysroot/lib/libc.so" --list "$@"' >> bin/ldd
+setup_coreutils_wrappers() {
+    for prog in "$@"; do
+        cp "$OUT/utilities_x86_64/x86_64-linux_coreutilsWrapper" "bin/$prog"
+    done
+}
+setup_clang_wrappers() {
+    for prog in "$@"; do
+        cp "$OUT/utilities_x86_64/x86_64-linux_clangWrapper" "bin/$prog"
+    done
+}
+setup_clang_compiler_wrappers() {
+    for prog in "$@"; do
+        cp "$OUT/utilities_x86_64/x86_64-linux_clangCompilerWrapper" "bin/$prog"
+    done
+}
+setup_lld_wrappers() {
+    for prog in "$@"; do
+        cp "$OUT/utilities_x86_64/x86_64-linux_lldWrapper" "bin/$prog"
+    done
+}
+setup_libc_so_wrappers() {
+    for prog in "$@"; do
+        cp "$OUT/utilities_x86_64/x86_64-linux_libcSoWrapper" "bin/$prog"
+    done
+}
+setup_sh_wrappers echo false printf test true 
+setup_coreutils_wrappers basename cat chmod comm cp cut date dd dirname env expr head install ln ls mkdir mv nl rm rmdir sha512sum sleep sort tail tee touch tr uname uniq wc
+setup_clang_wrappers cpp
+setup_clang_compiler_wrappers cc c++
+setup_lld_wrappers ld
+setup_libc_so_wrappers ldd
 
 recipe_finish
