@@ -7,6 +7,4 @@ DEPENDENCIES="llvm"
 DIR_DEPENDENCIES="../hc"
 
 recipe_start
-export LLVM="$OUT/llvm"
-OUT="$OUT/$SCRIPT_NAME" "$SCRIPT_DIR/../hc/tools/tar/hostbuild.sh"
 recipe_finish
